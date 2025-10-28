@@ -38,6 +38,13 @@
     .invoice-actions button{margin:0 5px;background:#d35400;color:white;border:0;padding:8px 12px;border-radius:6px;cursor:pointer;}
     .invoice-actions button:hover{background:#a84400;}
 
+    #previous-bills-section{margin-top:40px;}
+    #previous-bills-section table{background:#fff;border-collapse:collapse;width:100%;font-size:14px;}
+    #previous-bills-section th{background:#f3f3f3;}
+    #previous-bills-section td,th{border:1px solid #ddd;padding:8px;}
+    #previous-bills-section button{background:#d35400;color:white;border:0;padding:5px 8px;border-radius:4px;cursor:pointer;}
+    #previous-bills-section button:hover{background:#a84400;}
+
     @media print{
       body *{visibility:hidden;}
       #invoicePrint, #invoicePrint *{visibility:visible;}
@@ -70,6 +77,13 @@
       <table id="productsTable">
         <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Threshold</th><th>Action</th></tr></thead>
         <tbody></tbody>
+      </table>
+    </div>
+    <div id="previous-bills-section" class="card" style="display:none;">
+      <h3>Previous Generated Bills</h3>
+      <table>
+        <thead><tr><th>Invoice ID</th><th>Date</th><th>Total</th><th>Action</th></tr></thead>
+        <tbody id="previousBillsBody"></tbody>
       </table>
     </div>
   </section>
@@ -106,7 +120,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
-const KEY_PRODUCTS='ph_products_v2',KEY_SALES='ph_sales_v2';
+const KEY_PRODUCTS='ph_products_v2',KEY_SALES='ph_sales_v2',KEY_BILLS='ph_bills_v1';
 let products=[],sales=[],cart=[],editingId=null;
 const p_name=document.getElementById('p_name'),p_price=document.getElementById('p_price'),p_stock=document.getElementById('p_stock'),p_threshold=document.getElementById('p_threshold'),productsTableBody=document.querySelector('#productsTable tbody'),selectProduct=document.getElementById('selectProduct'),cartList=document.getElementById('cartList'),cartTotalEl=document.getElementById('cartTotal'),lowStockBanner=document.getElementById('lowStockBanner'),invoiceContent=document.getElementById('invoiceContent'),invoicePrint=document.getElementById('invoicePrint'),lastInvoiceArea=document.getElementById('lastInvoiceArea');
 
@@ -207,7 +221,8 @@ document.getElementById('generateBill').onclick=()=>{
 function showInvoice(sale){
   invoiceContent.innerHTML=`<h2>Paras Haldiram</h2><table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br><table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>${sale.items.map(it=>`<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.amt)}</td></tr>`).join('')}<tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr></table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;
   invoicePrint.style.display='block';
-  lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`
+  lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`;
+  saveBillRecord(sale.invoiceNo, sale.date, sale.total, invoiceContent.innerHTML);
 }
 
 document.getElementById('printLast').onclick=()=>{
@@ -215,12 +230,12 @@ document.getElementById('printLast').onclick=()=>{
   window.print()
 }
 
-// --- Added Download & Print Customer Copy ---
 document.getElementById('downloadCustomerCopy').onclick=()=>{
   if(!invoiceContent.innerHTML)return alert('No invoice to download');
+  const last=sales[sales.length-1];
   const opt={
     margin:10,
-    filename:'Customer_Copy.pdf',
+    filename:last?`${last.invoiceNo}.pdf`:'Customer_Copy.pdf',
     image:{type:'jpeg',quality:0.98},
     html2canvas:{scale:2},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
@@ -236,7 +251,48 @@ document.getElementById('printCustomerCopy').onclick=()=>{
   win.print();
 }
 
-function init(){load();refreshProductsTable();renderCart()}
+// ---- Previous Bills Logic ----
+function saveBillRecord(invoiceId,date,total,billHTML){
+  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
+  bills.push({invoiceId,date,total,billHTML});
+  localStorage.setItem(KEY_BILLS,JSON.stringify(bills));
+  loadPreviousBills();
+}
+
+function loadPreviousBills(){
+  const tbody=document.getElementById("previousBillsBody");
+  const section=document.getElementById("previous-bills-section");
+  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
+  tbody.innerHTML='';
+  if(!bills.length){section.style.display='none';return;}
+  section.style.display='block';
+  bills.forEach(b=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${b.invoiceId}</td><td>${b.date}</td><td>${money(b.total)}</td><td><button onclick="viewBill('${b.invoiceId}')">View</button> <button onclick="downloadBill('${b.invoiceId}')">Download</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function viewBill(id){
+  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
+  const b=bills.find(x=>x.invoiceId===id);
+  if(b){
+    const win=window.open('', '_blank','width=800,height=600');
+    win.document.write(`<html><head><title>${b.invoiceId}</title></head><body>${b.billHTML}</body></html>`);
+    win.document.close();
+  }
+}
+
+function downloadBill(id){
+  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
+  const b=bills.find(x=>x.invoiceId===id);
+  if(b){
+    const opt={margin:10,filename:`${b.invoiceId}.pdf`,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
+    html2pdf().set(opt).from(b.billHTML).save();
+  }
+}
+
+function init(){load();refreshProductsTable();renderCart();loadPreviousBills();}
 init();
 </script>
 </body>
