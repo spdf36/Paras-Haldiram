@@ -34,15 +34,15 @@
     .invoice-box table tr.heading td{background:#eee;border-bottom:1px solid #ddd;font-weight:bold;}
     .invoice-box table tr.item td{border-bottom:1px solid #eee;}
     .invoice-box table tr.total td:nth-child(3){border-top:2px solid #eee;font-weight:bold;}
+    .invoice-actions{text-align:center;margin-top:10px;}
+    .invoice-actions button{margin:0 5px;background:#d35400;color:white;border:0;padding:8px 12px;border-radius:6px;cursor:pointer;}
+    .invoice-actions button:hover{background:#a84400;}
+
     @media print{
-      /* Hide everything except the printable invoice */
       body *{visibility:hidden;}
       #invoicePrint, #invoicePrint *{visibility:visible;}
       #invoicePrint{position:absolute;left:0;top:0;width:100%;}
-
       header,main{display:none !important;}
-
-      /* Remove browser default print headers/footers */
       @page { margin: 15mm; size: auto; }
     }
   </style>
@@ -90,6 +90,10 @@
       <div id="lastInvoiceArea" class="muted">None</div>
       <br>
       <button id="printLast">Print / Download Bill</button>
+      <div class="invoice-actions">
+        <button id="downloadCustomerCopy">Download Customer Copy</button>
+        <button id="printCustomerCopy">Print Customer Copy</button>
+      </div>
     </div>
   </aside>
 </main>
@@ -97,6 +101,9 @@
 <div id="invoicePrint" style="display:none">
   <div id="invoiceContent" class="invoice-box"></div>
 </div>
+
+<!-- html2pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
 const KEY_PRODUCTS='ph_products_v2',KEY_SALES='ph_sales_v2';
@@ -208,11 +215,29 @@ document.getElementById('printLast').onclick=()=>{
   window.print()
 }
 
+// --- Added Download & Print Customer Copy ---
+document.getElementById('downloadCustomerCopy').onclick=()=>{
+  if(!invoiceContent.innerHTML)return alert('No invoice to download');
+  const opt={
+    margin:10,
+    filename:'Customer_Copy.pdf',
+    image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  };
+  html2pdf().set(opt).from(invoiceContent).save();
+}
+
+document.getElementById('printCustomerCopy').onclick=()=>{
+  if(!invoiceContent.innerHTML)return alert('No invoice to print');
+  const win=window.open('', '_blank','width=800,height=600');
+  win.document.write(`<html><head><title>Customer Copy</title></head><body>${invoiceContent.innerHTML}</body></html>`);
+  win.document.close();
+  win.print();
+}
+
 function init(){load();refreshProductsTable();renderCart()}
 init();
 </script>
 </body>
 </html>
-
-
-
