@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Paras Haldiram — Inventory & Billing</title>
   <style>
-    :root{
+    :root {
       --accent:#d35400;
       --accent-dark:#a84400;
       --muted:#6b6b6b;
@@ -14,31 +14,156 @@
       --success:#2e7d32;
       --danger:#c62828;
     }
-    body{margin:0;font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:#222}
-    header{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;padding:15px 20px;display:flex;align-items:center;justify-content:space-between}
-    header .brand{font-weight:700;font-size:22px;}
-    main{display:grid;grid-template-columns:1fr 380px;gap:18px;padding:20px;max-width:1200px;margin:auto;}
-    .card{background:var(--card);border-radius:10px;padding:15px;box-shadow:0 4px 12px rgba(0,0,0,0.05)}
-    input,select,textarea{padding:8px;border-radius:6px;border:1px solid #ddd;width:100%;font-size:14px;}
-    button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:6px;cursor:pointer;}
-    button:hover{background:var(--accent-dark)}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    tr.low-stock{background:#fff4e5}
-    .right{text-align:right}
-    .muted{color:var(--muted);font-size:13px}
-    .cart-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
-    .invoice-box{max-width:800px;margin:auto;padding:20px;border:1px solid #eee;box-shadow:0 0 10px rgba(0,0,0,0.15);font-size:16px;line-height:24px;color:#555;background:white}
-    .invoice-box table{width:100%;line-height:inherit;text-align:left;border-collapse:collapse;}
-    .invoice-box table td{padding:8px;vertical-align:top;}
-    .invoice-box table tr.heading td{background:#eee;border-bottom:1px solid #ddd;font-weight:bold;}
-    .invoice-box table tr.item td{border-bottom:1px solid #eee;}
-    .invoice-box table tr.total td:nth-child(3){border-top:2px solid #eee;font-weight:bold;}
-    @media print{
-      body *{visibility:hidden;}
-      #invoicePrint, #invoicePrint *{visibility:visible;}
-      #invoicePrint{position:absolute;left:0;top:0;width:100%;}
-      header,main{display:none !important;}
+
+    body {
+      margin:0;
+      font-family:'Segoe UI',Roboto,sans-serif;
+      background:var(--bg);
+      color:#222;
+    }
+
+    header {
+      background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+      color:white;
+      padding:15px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    header .brand {
+      font-weight:700;
+      font-size:22px;
+    }
+
+    main {
+      display:grid;
+      grid-template-columns:1fr 380px;
+      gap:18px;
+      padding:20px;
+      max-width:1200px;
+      margin:auto;
+    }
+
+    .card {
+      background:var(--card);
+      border-radius:10px;
+      padding:15px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    input, select, textarea {
+      padding:8px;
+      border-radius:6px;
+      border:1px solid #ddd;
+      width:100%;
+      font-size:14px;
+    }
+
+    /* Plain text buttons */
+    button {
+      background:none;
+      border:none;
+      color:var(--accent);
+      padding:6px 8px;
+      font-size:14px;
+      cursor:pointer;
+      text-decoration:underline;
+    }
+
+    button:hover {
+      color:var(--accent-dark);
+      text-decoration:none;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+
+    th, td {
+      padding:8px;
+      border-bottom:1px solid #eee;
+      text-align:left;
+    }
+
+    tr.low-stock {
+      background:#fff4e5;
+    }
+
+    .right {
+      text-align:right;
+    }
+
+    .muted {
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .cart-item {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:6px 0;
+      border-bottom:1px solid #eee;
+    }
+
+    .invoice-box {
+      max-width:800px;
+      margin:auto;
+      padding:20px;
+      border:1px solid #eee;
+      box-shadow:0 0 10px rgba(0,0,0,0.15);
+      font-size:16px;
+      line-height:24px;
+      color:#555;
+      background:white;
+    }
+
+    .invoice-box table {
+      width:100%;
+      line-height:inherit;
+      text-align:left;
+      border-collapse:collapse;
+    }
+
+    .invoice-box table td {
+      padding:8px;
+      vertical-align:top;
+    }
+
+    .invoice-box table tr.heading td {
+      background:#eee;
+      border-bottom:1px solid #ddd;
+      font-weight:bold;
+    }
+
+    .invoice-box table tr.item td {
+      border-bottom:1px solid #eee;
+    }
+
+    .invoice-box table tr.total td:nth-child(3) {
+      border-top:2px solid #eee;
+      font-weight:bold;
+    }
+
+    /* Responsive Layout */
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns:1fr;
+      }
+      aside {
+        order:-1;
+      }
+    }
+
+    @media print {
+      body * { visibility:hidden; }
+      #invoicePrint, #invoicePrint * { visibility:visible; }
+      #invoicePrint { position:absolute; left:0; top:0; width:100%; }
+      header, main { display:none !important; }
     }
   </style>
 </head>
@@ -47,6 +172,7 @@
   <div class="brand">Paras Haldiram</div>
   <div>Inventory & Billing Software</div>
 </header>
+
 <main>
   <section>
     <div class="card">
@@ -59,15 +185,21 @@
         <button id="saveProduct">Add Product</button>
       </form>
     </div>
+
     <div class="card">
       <h3>Product Stock</h3>
       <div id="lowStockBanner" class="muted"></div>
       <table id="productsTable">
-        <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Threshold</th><th>Action</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Name</th><th>Price</th><th>Stock</th><th>Threshold</th><th>Action</th>
+          </tr>
+        </thead>
         <tbody></tbody>
       </table>
     </div>
   </section>
+
   <aside>
     <div class="card">
       <h3>Create Bill</h3>
@@ -78,8 +210,9 @@
       <div style="text-align:right;margin-top:10px;font-weight:bold">Total: <span id="cartTotal">₹0.00</span></div>
       <br>
       <button id="generateBill">Generate Bill</button>
-      <button id="clearCart" style="background:#777">Clear</button>
+      <button id="clearCart">Clear</button>
     </div>
+
     <div class="card">
       <h3>Last Invoice</h3>
       <div id="lastInvoiceArea" class="muted">None</div>
@@ -88,25 +221,147 @@
     </div>
   </aside>
 </main>
+
 <div id="invoicePrint" style="display:none">
   <div id="invoiceContent" class="invoice-box"></div>
 </div>
+
 <script>
 const KEY_PRODUCTS='ph_products_v2',KEY_SALES='ph_sales_v2';
 let products=[],sales=[],cart=[],editingId=null;
-const p_name=document.getElementById('p_name'),p_price=document.getElementById('p_price'),p_stock=document.getElementById('p_stock'),p_threshold=document.getElementById('p_threshold'),productsTableBody=document.querySelector('#productsTable tbody'),selectProduct=document.getElementById('selectProduct'),cartList=document.getElementById('cartList'),cartTotalEl=document.getElementById('cartTotal'),lowStockBanner=document.getElementById('lowStockBanner'),invoiceContent=document.getElementById('invoiceContent'),invoicePrint=document.getElementById('invoicePrint'),lastInvoiceArea=document.getElementById('lastInvoiceArea');
-function uid(){return'p'+Date.now()+Math.floor(Math.random()*9999)}function money(n){return'₹'+Number(n).toFixed(2)}function save(){localStorage.setItem(KEY_PRODUCTS,JSON.stringify(products));localStorage.setItem(KEY_SALES,JSON.stringify(sales))}function load(){products=JSON.parse(localStorage.getItem(KEY_PRODUCTS)||'[]');sales=JSON.parse(localStorage.getItem(KEY_SALES)||'[]')}function refreshProductsTable(){productsTableBody.innerHTML='';products.forEach(p=>{const tr=document.createElement('tr');if(p.stock<= (p.threshold||0))tr.classList.add('low-stock');tr.innerHTML=`<td>${p.name}</td><td>${money(p.price)}</td><td>${p.stock}</td><td>${p.threshold||0}</td><td><button onclick="editProduct('${p.id}')">Edit</button> <button onclick="deleteProduct('${p.id}')" style="background:#c62828">Del</button></td>`;productsTableBody.appendChild(tr)});selectProduct.innerHTML='';products.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=`${p.name} (${p.stock})`;selectProduct.appendChild(o)});const low=products.filter(x=>x.stock<=(x.threshold||0));lowStockBanner.innerHTML=low.length?`<span style='color:#c62828'>Low stock: ${low.map(x=>x.name+' ('+x.stock+')').join(', ')}</span>`:'All products are sufficiently stocked.'}
-function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;p_name.value=p.name;p_price.value=p.price;p_stock.value=p.stock;p_threshold.value=p.threshold;editingId=id;document.getElementById('saveProduct').textContent='Update'}
-function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(x=>x.id!==id);save();refreshProductsTable()}
-document.getElementById('productForm').onsubmit=e=>{e.preventDefault();const n=p_name.value.trim(),pr=parseFloat(p_price.value),st=parseInt(p_stock.value),th=parseInt(p_threshold.value)||0;if(!n)return;if(editingId){Object.assign(products.find(x=>x.id===editingId),{name:n,price:pr,stock:st,threshold:th});editingId=null;document.getElementById('saveProduct').textContent='Add Product'}else products.push({id:uid(),name:n,price:pr,stock:st,threshold:th});save();refreshProductsTable();e.target.reset()};
-function renderCart(){cartList.innerHTML='';let total=0;cart.forEach(c=>{const p=products.find(x=>x.id===c.id);if(!p)return;const amt=p.price*c.qty;total+=amt;const d=document.createElement('div');d.className='cart-item';d.innerHTML=`<div>${p.name} × ${c.qty}</div><div>${money(amt)}</div>`;cartList.appendChild(d)});cartTotalEl.textContent=money(total)}
-document.getElementById('addToCart').onclick=()=>{const pid=selectProduct.value,qty=parseInt(document.getElementById('cartQty').value)||1;const p=products.find(x=>x.id===pid);if(!p)return alert('No product');if(qty>p.stock)return alert('Not enough stock');const ex=cart.find(c=>c.id===pid);if(ex)ex.qty+=qty;else cart.push({id:pid,qty});renderCart()}
+const p_name=document.getElementById('p_name'),
+p_price=document.getElementById('p_price'),
+p_stock=document.getElementById('p_stock'),
+p_threshold=document.getElementById('p_threshold'),
+productsTableBody=document.querySelector('#productsTable tbody'),
+selectProduct=document.getElementById('selectProduct'),
+cartList=document.getElementById('cartList'),
+cartTotalEl=document.getElementById('cartTotal'),
+lowStockBanner=document.getElementById('lowStockBanner'),
+invoiceContent=document.getElementById('invoiceContent'),
+invoicePrint=document.getElementById('invoicePrint'),
+lastInvoiceArea=document.getElementById('lastInvoiceArea');
+
+function uid(){return'p'+Date.now()+Math.floor(Math.random()*9999)}
+function money(n){return'₹'+Number(n).toFixed(2)}
+function save(){localStorage.setItem(KEY_PRODUCTS,JSON.stringify(products));localStorage.setItem(KEY_SALES,JSON.stringify(sales))}
+function load(){products=JSON.parse(localStorage.getItem(KEY_PRODUCTS)||'[]');sales=JSON.parse(localStorage.getItem(KEY_SALES)||'[]')}
+
+function refreshProductsTable(){
+  productsTableBody.innerHTML='';
+  products.forEach(p=>{
+    const tr=document.createElement('tr');
+    if(p.stock<=(p.threshold||0))tr.classList.add('low-stock');
+    tr.innerHTML=`<td>${p.name}</td><td>${money(p.price)}</td><td>${p.stock}</td><td>${p.threshold||0}</td><td><button onclick="editProduct('${p.id}')">Edit</button> <button onclick="deleteProduct('${p.id}')" style="color:var(--danger)">Delete</button></td>`;
+    productsTableBody.appendChild(tr)
+  });
+  selectProduct.innerHTML='';
+  products.forEach(p=>{
+    const o=document.createElement('option');
+    o.value=p.id;
+    o.textContent=`${p.name} (${p.stock})`;
+    selectProduct.appendChild(o)
+  });
+  const low=products.filter(x=>x.stock<=(x.threshold||0));
+  lowStockBanner.innerHTML=low.length?`<span style='color:var(--danger)'>Low stock: ${low.map(x=>x.name+' ('+x.stock+')').join(', ')}</span>`:'All products are sufficiently stocked.';
+}
+
+function editProduct(id){
+  const p=products.find(x=>x.id===id);
+  if(!p)return;
+  p_name.value=p.name;p_price.value=p.price;p_stock.value=p.stock;p_threshold.value=p.threshold;
+  editingId=id;
+  document.getElementById('saveProduct').textContent='Update';
+}
+
+function deleteProduct(id){
+  if(!confirm('Delete this product?'))return;
+  products=products.filter(x=>x.id!==id);
+  save();refreshProductsTable();
+}
+
+document.getElementById('productForm').onsubmit=e=>{
+  e.preventDefault();
+  const n=p_name.value.trim(),pr=parseFloat(p_price.value),st=parseInt(p_stock.value),th=parseInt(p_threshold.value)||0;
+  if(!n)return;
+  if(editingId){
+    Object.assign(products.find(x=>x.id===editingId),{name:n,price:pr,stock:st,threshold:th});
+    editingId=null;
+    document.getElementById('saveProduct').textContent='Add Product';
+  } else {
+    products.push({id:uid(),name:n,price:pr,stock:st,threshold:th});
+  }
+  save();refreshProductsTable();e.target.reset();
+};
+
+function renderCart(){
+  cartList.innerHTML='';
+  let total=0;
+  cart.forEach(c=>{
+    const p=products.find(x=>x.id===c.id);
+    if(!p)return;
+    const amt=p.price*c.qty;
+    total+=amt;
+    const d=document.createElement('div');
+    d.className='cart-item';
+    d.innerHTML=`<div>${p.name} × ${c.qty}</div><div>${money(amt)}</div>`;
+    cartList.appendChild(d);
+  });
+  cartTotalEl.textContent=money(total);
+}
+
+document.getElementById('addToCart').onclick=()=>{
+  const pid=selectProduct.value,qty=parseInt(document.getElementById('cartQty').value)||1;
+  const p=products.find(x=>x.id===pid);
+  if(!p)return alert('No product');
+  if(qty>p.stock)return alert('Not enough stock');
+  const ex=cart.find(c=>c.id===pid);
+  if(ex)ex.qty+=qty;else cart.push({id:pid,qty});
+  renderCart();
+}
+
 document.getElementById('clearCart').onclick=()=>{cart=[];renderCart()}
-document.getElementById('generateBill').onclick=()=>{if(!cart.length)return alert('Cart empty');for(const c of cart){const p=products.find(x=>x.id===c.id);if(!p||p.stock<c.qty)return alert('Insufficient stock')}const invoiceNo='INV'+Date.now();const date=new Date().toLocaleString();let sub=0;const items=cart.map(c=>{const p=products.find(x=>x.id===c.id);const amt=p.price*c.qty;sub+=amt;return{name:p.name,price:p.price,qty:c.qty,amt}});items.forEach(it=>{const p=products.find(x=>x.name===it.name);p.stock-=it.qty});const sale={invoiceNo,date,items,subtotal:sub,total:sub};sales.push(sale);save();refreshProductsTable();cart=[];renderCart();showInvoice(sale)}
-function showInvoice(sale){invoiceContent.innerHTML=`<h2>Paras Haldiram</h2><table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br><table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>${sale.items.map(it=>`<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.amt)}</td></tr>`).join('')}<tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr></table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;invoicePrint.style.display='block';lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`}
-document.getElementById('printLast').onclick=()=>{if(!invoiceContent.innerHTML)return alert('No invoice');window.print()}
-function init(){load();refreshProductsTable();renderCart()}init();
+
+document.getElementById('generateBill').onclick=()=>{
+  if(!cart.length)return alert('Cart empty');
+  for(const c of cart){
+    const p=products.find(x=>x.id===c.id);
+    if(!p||p.stock<c.qty)return alert('Insufficient stock');
+  }
+  const invoiceNo='INV'+Date.now();
+  const date=new Date().toLocaleString();
+  let sub=0;
+  const items=cart.map(c=>{
+    const p=products.find(x=>x.id===c.id);
+    const amt=p.price*c.qty;
+    sub+=amt;
+    return{name:p.name,price:p.price,qty:c.qty,amt};
+  });
+  items.forEach(it=>{
+    const p=products.find(x=>x.name===it.name);
+    p.stock-=it.qty;
+  });
+  const sale={invoiceNo,date,items,subtotal:sub,total:sub};
+  sales.push(sale);
+  save();refreshProductsTable();cart=[];renderCart();
+  showInvoice(sale);
+}
+
+function showInvoice(sale){
+  invoiceContent.innerHTML=`<h2>Paras Haldiram</h2><table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br><table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>${sale.items.map(it=>`<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.amt)}</td></tr>`).join('')}<tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr></table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;
+  invoicePrint.style.display='block';
+  lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`;
+}
+
+document.getElementById('printLast').onclick=()=>{
+  if(!invoiceContent.innerHTML)return alert('No invoice');
+  window.print();
+}
+
+function init(){load();refreshProductsTable();renderCart()}
+init();
 </script>
 </body>
 </html>
+
 
