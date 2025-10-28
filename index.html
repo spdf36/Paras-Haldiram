@@ -44,13 +44,14 @@
     #previous-bills-section td,th{border:1px solid #ddd;padding:8px;}
     #previous-bills-section button{background:#d35400;color:white;border:0;padding:5px 8px;border-radius:4px;cursor:pointer;}
     #previous-bills-section button:hover{background:#a84400;}
+    .small-btn{background:#777;padding:5px 8px;border-radius:4px;margin-left:6px;color:white;border:0;cursor:pointer}
+    .small-btn:hover{background:#555}
 
     @media print{
       body *{visibility:hidden;}
       #invoicePrint, #invoicePrint *{visibility:visible;}
       #invoicePrint{position:absolute;left:0;top:0;width:100%;}
       header,main{display:none !important;}
-      /* Best-effort: browsers may still show their own headers/footers; @page helps some browsers */
       @page { margin: 15mm; size: auto; }
     }
   </style>
@@ -84,6 +85,9 @@
 
     <div id="previous-bills-section" class="card">
       <h3>Previous Generated Bills</h3>
+      <div style="margin-bottom:10px;">
+        <button id="exportAllCSV" style="background:#2f80ed">Export All Bills (CSV)</button>
+      </div>
       <div id="previousBillsArea" class="muted">Loading…</div>
     </div>
   </section>
@@ -128,7 +132,7 @@
     getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, getDoc
   } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // --- Your Firebase config (you provided) ---
+  // --- Your Firebase config (you provided earlier) ---
   const firebaseConfig = {
     apiKey: "AIzaSyB6twWRWqW76Gy0UClFGHarhk8K6TlUFao",
     authDomain: "paras-haldiram.firebaseapp.com",
@@ -151,6 +155,7 @@
   const invoicePrint = document.getElementById('invoicePrint');
   const lastInvoiceArea = document.getElementById('lastInvoiceArea');
   const previousBillsArea = document.getElementById('previousBillsArea');
+  const exportAllCSVBtn = document.getElementById('exportAllCSV');
 
   const p_name = document.getElementById('p_name');
   const p_price = document.getElementById('p_price');
@@ -173,7 +178,6 @@
   }
 
   function renderProducts(products){
-    // products table
     productsTableBody.innerHTML = '';
     selectProduct.innerHTML = '';
     products.forEach(p => {
@@ -201,7 +205,6 @@
 
   // Expose edit/delete to global for inline handlers
   window.editProductFire = async (docId) => {
-    // fetch doc
     const dref = doc(db, 'products', docId);
     const snap = await getDoc(dref);
     if (!snap.exists()) return alert('Product not found');
@@ -268,7 +271,6 @@
     if (!snap.exists()) return alert('Product not found');
     const prod = snap.data();
     if (qty > prod.stock) return alert('Not enough stock');
-    // if same product exists in cart, increment
     const existing = cart.find(c => c.id === pid);
     if (existing) existing.qty += qty;
     else cart.push({ id: pid, name: prod.name, price: prod.price, qty });
@@ -280,7 +282,6 @@
   /* --- SALES / BILLS --- */
   async function generateBillFirestore(){
     if (!cart.length) return alert('Cart empty');
-    // check stock again and compute totals
     for (const c of cart) {
       const snap = await getDoc(doc(db, 'products', c.id));
       if (!snap.exists()) return alert('Product missing: ' + c.name);
@@ -317,7 +318,6 @@
   document.getElementById('generateBill').onclick = generateBillFirestore;
 
   function showInvoice(sale, docId){
-    // sale might be doc data or freshly created object
     invoiceContent.innerHTML = `<h2>Paras Haldiram</h2>
       <table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br>
       <table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>
@@ -326,7 +326,6 @@
       </table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;
     invoicePrint.style.display = 'block';
     lastInvoiceArea.innerText = `Invoice ${sale.invoiceNo} — ${sale.date}`;
-    // attach current doc id to lastInvoiceArea dataset for download filename if available
     if (docId) lastInvoiceArea.dataset.docId = docId;
   }
 
@@ -338,12 +337,10 @@
 
   document.getElementById('downloadCustomerCopy').onclick = () => {
     if (!invoiceContent.innerHTML) return alert('No invoice to download');
-    // derive filename from shown invoice (invoiceNo)
     const txt = lastInvoiceArea.textContent || '';
     const match = txt.match(/Invoice\s+(INV\d+)/);
     const invoiceNo = match ? match[1] : ('INV' + Date.now());
     const opt = { margin: 10, filename: `${invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-    // html2pdf is a global from included script
     html2pdf().set(opt).from(invoiceContent).save();
   };
 
@@ -371,6 +368,7 @@
         <td>
           <button data-id="${d.id}" class="view-btn">View</button>
           <button data-id="${d.id}" class="download-btn">Download</button>
+          <button data-id="${d.id}" class="delete-btn" style="background:#c62828;margin-left:6px">Delete</button>
         </td>`;
       tbody.appendChild(tr);
     });
@@ -389,12 +387,43 @@
       const docSnap = await getDoc(doc(db, 'sales', id));
       if (!docSnap.exists()) return alert('Bill not found');
       const s = docSnap.data();
-      // render invoice content then call html2pdf
       showInvoice(s, id);
       const opt = { margin: 10, filename: `${s.invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
       html2pdf().set(opt).from(invoiceContent).save();
     });
+    previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
+      const id = ev.target.dataset.id;
+      if (!confirm('Delete this bill permanently?')) return;
+      await deleteDoc(doc(db, 'sales', id));
+      await loadPreviousBills();
+    });
   }
+
+  /* --- Export All Bills (CSV) --- */
+  exportAllCSVBtn.onclick = async () => {
+    const snap = await getDocs(collection(db, 'sales'));
+    if (snap.empty) return alert('No bills to export');
+    const rows = [];
+    // headers
+    rows.push(['InvoiceID','Date','Total','Items']); // simple columns
+    snap.docs.forEach(d => {
+      const s = d.data();
+      // items as "name|qty|price" separated by ';'
+      const itemsStr = (s.items || []).map(it => `${it.name}|${it.qty}|${it.price}`).join('; ');
+      rows.push([s.invoiceNo, s.date, s.total, itemsStr]);
+    });
+    // build CSV
+    const csv = rows.map(r => r.map(field => `"${String(field).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `paras_haldiram_bills_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   /* --- Init: load products and previous bills --- */
   async function init(){
@@ -404,7 +433,7 @@
   }
   init();
 
-  // Expose some helpers if needed in console
+  // Expose some helpers for console if needed
   window._paras = { db };
 
 </script>
