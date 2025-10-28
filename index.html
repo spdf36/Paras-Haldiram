@@ -24,9 +24,10 @@
     button:hover{background:var(--accent-dark)}
     table{width:100%;border-collapse:collapse;font-size:14px}
     th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    tr.low-stock{background:#fff4e5}
+    tr.low-stock{background:#ffebee;color:#b71c1c;font-weight:bold;}
     .right{text-align:right}
     .muted{color:var(--muted);font-size:13px}
+    #lowStockBanner{font-size:16px;font-weight:bold;margin-bottom:8px;color:#c62828;}
     .cart-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
     .invoice-box{max-width:800px;margin:auto;padding:20px;border:1px solid #eee;box-shadow:0 0 10px rgba(0,0,0,0.15);font-size:16px;line-height:24px;color:#555;background:white}
     .invoice-box table{width:100%;line-height:inherit;text-align:left;border-collapse:collapse;}
@@ -122,17 +123,14 @@
   <div id="invoiceContent" class="invoice-box"></div>
 </div>
 
-<!-- html2pdf (global) -->
+<!-- html2pdf -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<!-- Firebase (modular) -->
+<!-- Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import {
-    getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, getDoc
-  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // --- Your Firebase config (you provided earlier) ---
   const firebaseConfig = {
     apiKey: "AIzaSyB6twWRWqW76Gy0UClFGHarhk8K6TlUFao",
     authDomain: "paras-haldiram.firebaseapp.com",
@@ -145,7 +143,6 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // DOM refs
   const productsTableBody = document.querySelector('#productsTable tbody');
   const selectProduct = document.getElementById('selectProduct');
   const cartList = document.getElementById('cartList');
@@ -156,20 +153,17 @@
   const lastInvoiceArea = document.getElementById('lastInvoiceArea');
   const previousBillsArea = document.getElementById('previousBillsArea');
   const exportAllCSVBtn = document.getElementById('exportAllCSV');
-
   const p_name = document.getElementById('p_name');
   const p_price = document.getElementById('p_price');
   const p_stock = document.getElementById('p_stock');
   const p_threshold = document.getElementById('p_threshold');
 
-  let editingProductId = null; // firestore doc id if editing
+  let editingProductId = null;
   let cart = [];
 
-  /* helpers */
   function money(n){ return '₹' + Number(n).toFixed(2); }
   function invoiceIdNow(){ return 'INV' + Date.now(); }
 
-  /* --- PRODUCTS: load/render/save/update/delete --- */
   async function loadProductsFromFirestore(){
     const snap = await getDocs(collection(db, 'products'));
     const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -183,14 +177,9 @@
     products.forEach(p => {
       const tr = document.createElement('tr');
       if (p.stock <= (p.threshold || 0)) tr.classList.add('low-stock');
-      tr.innerHTML = `<td>${p.name}</td>
-                      <td>${money(p.price)}</td>
-                      <td>${p.stock}</td>
-                      <td>${p.threshold || 0}</td>
-                      <td>
-                        <button onclick="editProductFire('${p.id}')">Edit</button>
-                        <button onclick="deleteProductFire('${p.id}')" style="background:#c62828">Del</button>
-                      </td>`;
+      tr.innerHTML = `<td>${p.name}</td><td>${money(p.price)}</td><td>${p.stock}</td><td>${p.threshold || 0}</td>
+      <td><button onclick="editProductFire('${p.id}')">Edit</button>
+      <button onclick="deleteProductFire('${p.id}')" style="background:#c62828">Del</button></td>`;
       productsTableBody.appendChild(tr);
 
       const o = document.createElement('option');
@@ -200,10 +189,11 @@
     });
 
     const low = products.filter(x => x.stock <= (x.threshold || 0));
-    lowStockBanner.innerHTML = low.length ? `<span style='color:#c62828'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 'All products are sufficiently stocked.';
+    lowStockBanner.innerHTML = low.length ? 
+      `<span>⚠️ Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 
+      'All products are sufficiently stocked.';
   }
 
-  // Expose edit/delete to global for inline handlers
   window.editProductFire = async (docId) => {
     const dref = doc(db, 'products', docId);
     const snap = await getDoc(dref);
@@ -227,7 +217,6 @@
     await loadProductsFromFirestore();
   }
 
-  // Add or update product
   document.getElementById('productForm').onsubmit = async (e) => {
     e.preventDefault();
     const name = p_name.value.trim();
@@ -236,7 +225,6 @@
     const threshold = parseInt(p_threshold.value || 0);
 
     if (!name) return alert('Product name required');
-
     if (editingProductId) {
       await updateDoc(doc(db, 'products', editingProductId), { name, price, stock, threshold });
       editingProductId = null;
@@ -248,7 +236,6 @@
     await refreshAllProducts();
   };
 
-  /* --- CART --- */
   function renderCart(){
     cartList.innerHTML = '';
     let total = 0;
@@ -279,7 +266,6 @@
 
   document.getElementById('clearCart').onclick = () => { cart = []; renderCart(); };
 
-  /* --- SALES / BILLS --- */
   async function generateBillFirestore(){
     if (!cart.length) return alert('Cart empty');
     for (const c of cart) {
@@ -294,10 +280,7 @@
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
     const saleDoc = { invoiceNo, date, items: cart.map(i => ({ name: i.name, id: i.id, price: i.price, qty: i.qty })), subtotal, total: subtotal };
 
-    // Save sale to Firestore
     const saleRef = await addDoc(collection(db, 'sales'), saleDoc);
-
-    // Update product stocks in Firestore
     for (const it of cart) {
       const prodRef = doc(db, 'products', it.id);
       const prodSnap = await getDoc(prodRef);
@@ -307,7 +290,6 @@
       await updateDoc(prodRef, { stock: newStock });
     }
 
-    // show invoice and refresh products & previous bills
     showInvoice(saleDoc, saleRef.id);
     cart = [];
     renderCart();
@@ -329,7 +311,6 @@
     if (docId) lastInvoiceArea.dataset.docId = docId;
   }
 
-  /* --- Print / Download --- */
   document.getElementById('printLast').onclick = () => {
     if (!invoiceContent.innerHTML) return alert('No invoice');
     window.print();
@@ -352,90 +333,55 @@
     win.print();
   };
 
-  /* --- Previous bills list (reads from Firestore sales collection) --- */
   async function loadPreviousBills(){
     const snap = await getDocs(collection(db, 'sales'));
     if (snap.empty) { previousBillsArea.textContent = 'No bills yet'; return; }
     previousBillsArea.innerHTML = '';
-    // render latest first
-    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=> (b.invoiceNo > a.invoiceNo ? 1 : -1));
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const tbl = document.createElement('table');
-    tbl.innerHTML = `<thead><tr><th>Invoice ID</th><th>Date</th><th>Total</th><th>Action</th></tr></thead>`;
-    const tbody = document.createElement('tbody');
-    docs.forEach(d => {
+    tbl.innerHTML = `<thead><tr><th>Invoice</th><th>Date</th><th>Total</th><th>Action</th></tr></thead><tbody></tbody>`;
+    const tb = tbl.querySelector('tbody');
+    docs.forEach(b => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${d.invoiceNo}</td><td>${d.date}</td><td>${money(d.total)}</td>
-        <td>
-          <button data-id="${d.id}" class="view-btn">View</button>
-          <button data-id="${d.id}" class="download-btn">Download</button>
-          <button data-id="${d.id}" class="delete-btn" style="background:#c62828;margin-left:6px">Delete</button>
-        </td>`;
-      tbody.appendChild(tr);
+      tr.innerHTML = `<td>${b.invoiceNo}</td><td>${b.date}</td><td>${money(b.total)}</td>
+      <td><button onclick="deleteBill('${b.id}')">🗑️ Delete</button>
+      <button onclick="viewBill('${b.id}')">View</button></td>`;
+      tb.appendChild(tr);
     });
-    tbl.appendChild(tbody);
     previousBillsArea.appendChild(tbl);
-
-    // attach handlers
-    previousBillsArea.querySelectorAll('.view-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      const docSnap = await getDoc(doc(db, 'sales', id));
-      if (!docSnap.exists()) return alert('Bill not found');
-      showInvoice(docSnap.data(), id);
-    });
-    previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      const docSnap = await getDoc(doc(db, 'sales', id));
-      if (!docSnap.exists()) return alert('Bill not found');
-      const s = docSnap.data();
-      showInvoice(s, id);
-      const opt = { margin: 10, filename: `${s.invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().set(opt).from(invoiceContent).save();
-    });
-    previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      if (!confirm('Delete this bill permanently?')) return;
-      await deleteDoc(doc(db, 'sales', id));
-      await loadPreviousBills();
-    });
   }
 
-  /* --- Export All Bills (CSV) --- */
+  window.deleteBill = async (billId) => {
+    if (!confirm('Delete this bill permanently?')) return;
+    await deleteDoc(doc(db, 'sales', billId));
+    await loadPreviousBills();
+  };
+
+  window.viewBill = async (billId) => {
+    const billSnap = await getDoc(doc(db, 'sales', billId));
+    if (!billSnap.exists()) return alert('Bill not found');
+    showInvoice(billSnap.data(), billId);
+  };
+
   exportAllCSVBtn.onclick = async () => {
     const snap = await getDocs(collection(db, 'sales'));
     if (snap.empty) return alert('No bills to export');
-    const rows = [];
-    // headers
-    rows.push(['InvoiceID','Date','Total','Items']); // simple columns
-    snap.docs.forEach(d => {
-      const s = d.data();
-      // items as "name|qty|price" separated by ';'
-      const itemsStr = (s.items || []).map(it => `${it.name}|${it.qty}|${it.price}`).join('; ');
-      rows.push([s.invoiceNo, s.date, s.total, itemsStr]);
+    const bills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    let csv = 'Invoice,Date,Item,Qty,Price,Amount,Total\n';
+    bills.forEach(b => {
+      b.items.forEach(i => {
+        csv += `${b.invoiceNo},${b.date},${i.name},${i.qty},${i.price},${i.price * i.qty},${b.total}\n`;
+      });
     });
-    // build CSV
-    const csv = rows.map(r => r.map(field => `"${String(field).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `paras_haldiram_bills_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
+    a.href = URL.createObjectURL(blob);
+    a.download = 'All_Bills.csv';
     a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
   };
 
-  /* --- Init: load products and previous bills --- */
-  async function init(){
-    await loadProductsFromFirestore();
-    await loadPreviousBills();
-    renderCart();
-  }
-  init();
-
-  // Expose some helpers for console if needed
-  window._paras = { db };
-
+  loadProductsFromFirestore();
+  loadPreviousBills();
 </script>
 </body>
 </html>
