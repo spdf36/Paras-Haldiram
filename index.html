@@ -165,6 +165,16 @@
       #invoicePrint { position:absolute; left:0; top:0; width:100%; }
       header, main { display:none !important; }
     }
+    @page {
+  margin: 20mm;
+  size: auto;
+  /* Remove default print headers and footers (URL, date, etc.) */
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
   </style>
 </head>
 <body>
