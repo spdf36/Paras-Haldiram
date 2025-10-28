@@ -1,111 +1,330 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Paras Haldiram — Inventory & Billing</title>
   <style>
-    :root{
-      --accent:#d35400;
-      --accent-dark:#a84400;
-      --muted:#6b6b6b;
-      --bg:#f8f5ef;
-      --card:#ffffff;
-      --success:#2e7d32;
-      --danger:#c62828;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 0;
     }
-    body{margin:0;font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:#222}
-    header{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;padding:15px 20px;display:flex;align-items:center;justify-content:space-between}
-    header .brand{font-weight:700;font-size:22px;}
-    main{display:grid;grid-template-columns:1fr 380px;gap:18px;padding:20px;max-width:1200px;margin:auto;}
-    .card{background:var(--card);border-radius:10px;padding:15px;box-shadow:0 4px 12px rgba(0,0,0,0.05)}
-    input,select,textarea{padding:8px;border-radius:6px;border:1px solid #ddd;width:100%;font-size:14px;}
-    button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:6px;cursor:pointer;}
-    button:hover{background:var(--accent-dark)}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    tr.low-stock{background:#fff4e5}
-    .right{text-align:right}
-    .muted{color:var(--muted);font-size:13px}
-    .cart-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
-    .invoice-box{max-width:800px;margin:auto;padding:20px;border:1px solid #eee;box-shadow:0 0 10px rgba(0,0,0,0.15);font-size:16px;line-height:24px;color:#555;background:white}
-    .invoice-box table{width:100%;line-height:inherit;text-align:left;border-collapse:collapse;}
-    .invoice-box table td{padding:8px;vertical-align:top;}
-    .invoice-box table tr.heading td{background:#eee;border-bottom:1px solid #ddd;font-weight:bold;}
-    .invoice-box table tr.item td{border-bottom:1px solid #eee;}
-    .invoice-box table tr.total td:nth-child(3){border-top:2px solid #eee;font-weight:bold;}
-    @media print{
-      body *{visibility:hidden;}
-      #invoicePrint, #invoicePrint *{visibility:visible;}
-      #invoicePrint{position:absolute;left:0;top:0;width:100%;}
-      header,main{display:none !important;}
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    input, button {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #f1f1f1;
+    }
+    button:hover {
+      background-color: #e1e1e1;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f9f9f9;
+    }
+    .stock-alert {
+      color: red;
+      font-weight: bold;
+    }
+    .bill-section {
+      margin-top: 30px;
+    }
+    .bill {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 15px;
+      background: #fff;
+    }
+    .bill-header {
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .bill-details {
+      margin-bottom: 15px;
+    }
+    .bill-table th, .bill-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    .total {
+      text-align: right;
+      font-weight: bold;
+    }
+    .actions {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .actions button {
+      background: none;
+      border: none;
+      color: #0077cc;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 0 10px;
+    }
+    .actions button:hover {
+      color: #004c99;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      form {
+        flex-direction: column;
+      }
+      input, button {
+        width: 100%;
+      }
+      .actions button {
+        display: block;
+        margin: 8px auto;
+      }
+    }
+
+    /* Print Styles */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #bill-print-area, #bill-print-area * {
+        visibility: visible;
+      }
+      #bill-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      @page {
+        margin: 20mm;
+      }
     }
   </style>
 </head>
 <body>
-<header>
-  <div class="brand">Paras Haldiram</div>
-  <div>Inventory & Billing Software</div>
-</header>
-<main>
-  <section>
-    <div class="card">
-      <h3>Add / Edit Product</h3>
-      <form id="productForm">
-        <input id="p_name" placeholder="Product Name" required><br><br>
-        <input id="p_price" type="number" placeholder="Price" required><br><br>
-        <input id="p_stock" type="number" placeholder="Stock" required><br><br>
-        <input id="p_threshold" type="number" placeholder="Low Stock Alert at (qty)"><br><br>
-        <button id="saveProduct">Add Product</button>
+  <div class="container">
+    <h1>Paras Haldiram — Inventory & Billing</h1>
+
+    <!-- Product Management -->
+    <form id="product-form">
+      <input type="text" id="product-name" placeholder="Product Name" required />
+      <input type="number" id="product-qty" placeholder="Quantity" required />
+      <input type="number" id="product-price" placeholder="Price" required />
+      <button type="submit">Add Product</button>
+    </form>
+
+    <table id="inventory-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Quantity</th>
+          <th>Price</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- Billing Section -->
+    <div class="bill-section">
+      <h2>Generate Bill</h2>
+      <form id="bill-form">
+        <input type="text" id="bill-product" placeholder="Product Name" required />
+        <input type="number" id="bill-qty" placeholder="Quantity" required />
+        <button type="submit">Generate Bill</button>
       </form>
+
+      <div id="bill-print-area" class="bill">
+        <div class="bill-header">Paras Haldiram</div>
+        <div class="bill-details">
+          <p><strong>Date:</strong> <span id="bill-date"></span></p>
+          <p><strong>Invoice No:</strong> <span id="invoice-no"></span></p>
+        </div>
+        <table class="bill-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="bill-body"></tbody>
+        </table>
+        <p class="total">Grand Total: ₹<span id="grand-total">0</span></p>
+      </div>
+
+      <div class="actions">
+        <button id="print-btn">Print Bill</button>
+        <button id="download-btn">Download Bill</button>
+      </div>
     </div>
-    <div class="card">
-      <h3>Product Stock</h3>
-      <div id="lowStockBanner" class="muted"></div>
-      <table id="productsTable">
-        <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Threshold</th><th>Action</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-  <aside>
-    <div class="card">
-      <h3>Create Bill</h3>
-      <select id="selectProduct"></select><br><br>
-      <input id="cartQty" type="number" value="1" min="1"><br><br>
-      <button id="addToCart">Add to Cart</button>
-      <div id="cartList" style="margin-top:10px"></div>
-      <div style="text-align:right;margin-top:10px;font-weight:bold">Total: <span id="cartTotal">₹0.00</span></div>
-      <br>
-      <button id="generateBill">Generate Bill</button>
-      <button id="clearCart" style="background:#777">Clear</button>
-    </div>
-    <div class="card">
-      <h3>Last Invoice</h3>
-      <div id="lastInvoiceArea" class="muted">None</div>
-      <br>
-      <button id="printLast">Print / Download Bill</button>
-    </div>
-  </aside>
-</main>
-<div id="invoicePrint" style="display:none">
-  <div id="invoiceContent" class="invoice-box"></div>
-</div>
-<script>
-const KEY_PRODUCTS='ph_products_v2',KEY_SALES='ph_sales_v2';
-let products=[],sales=[],cart=[],editingId=null;
-const p_name=document.getElementById('p_name'),p_price=document.getElementById('p_price'),p_stock=document.getElementById('p_stock'),p_threshold=document.getElementById('p_threshold'),productsTableBody=document.querySelector('#productsTable tbody'),selectProduct=document.getElementById('selectProduct'),cartList=document.getElementById('cartList'),cartTotalEl=document.getElementById('cartTotal'),lowStockBanner=document.getElementById('lowStockBanner'),invoiceContent=document.getElementById('invoiceContent'),invoicePrint=document.getElementById('invoicePrint'),lastInvoiceArea=document.getElementById('lastInvoiceArea');
-function uid(){return'p'+Date.now()+Math.floor(Math.random()*9999)}function money(n){return'₹'+Number(n).toFixed(2)}function save(){localStorage.setItem(KEY_PRODUCTS,JSON.stringify(products));localStorage.setItem(KEY_SALES,JSON.stringify(sales))}function load(){products=JSON.parse(localStorage.getItem(KEY_PRODUCTS)||'[]');sales=JSON.parse(localStorage.getItem(KEY_SALES)||'[]')}function refreshProductsTable(){productsTableBody.innerHTML='';products.forEach(p=>{const tr=document.createElement('tr');if(p.stock<= (p.threshold||0))tr.classList.add('low-stock');tr.innerHTML=`<td>${p.name}</td><td>${money(p.price)}</td><td>${p.stock}</td><td>${p.threshold||0}</td><td><button onclick="editProduct('${p.id}')">Edit</button> <button onclick="deleteProduct('${p.id}')" style="background:#c62828">Del</button></td>`;productsTableBody.appendChild(tr)});selectProduct.innerHTML='';products.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=`${p.name} (${p.stock})`;selectProduct.appendChild(o)});const low=products.filter(x=>x.stock<=(x.threshold||0));lowStockBanner.innerHTML=low.length?`<span style='color:#c62828'>Low stock: ${low.map(x=>x.name+' ('+x.stock+')').join(', ')}</span>`:'All products are sufficiently stocked.'}
-function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;p_name.value=p.name;p_price.value=p.price;p_stock.value=p.stock;p_threshold.value=p.threshold;editingId=id;document.getElementById('saveProduct').textContent='Update'}
-function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(x=>x.id!==id);save();refreshProductsTable()}
-document.getElementById('productForm').onsubmit=e=>{e.preventDefault();const n=p_name.value.trim(),pr=parseFloat(p_price.value),st=parseInt(p_stock.value),th=parseInt(p_threshold.value)||0;if(!n)return;if(editingId){Object.assign(products.find(x=>x.id===editingId),{name:n,price:pr,stock:st,threshold:th});editingId=null;document.getElementById('saveProduct').textContent='Add Product'}else products.push({id:uid(),name:n,price:pr,stock:st,threshold:th});save();refreshProductsTable();e.target.reset()};
-function renderCart(){cartList.innerHTML='';let total=0;cart.forEach(c=>{const p=products.find(x=>x.id===c.id);if(!p)return;const amt=p.price*c.qty;total+=amt;const d=document.createElement('div');d.className='cart-item';d.innerHTML=`<div>${p.name} × ${c.qty}</div><div>${money(amt)}</div>`;cartList.appendChild(d)});cartTotalEl.textContent=money(total)}
-document.getElementById('addToCart').onclick=()=>{const pid=selectProduct.value,qty=parseInt(document.getElementById('cartQty').value)||1;const p=products.find(x=>x.id===pid);if(!p)return alert('No product');if(qty>p.stock)return alert('Not enough stock');const ex=cart.find(c=>c.id===pid);if(ex)ex.qty+=qty;else cart.push({id:pid,qty});renderCart()}
-document.getElementById('clearCart').onclick=()=>{cart=[];renderCart()}
-document.getElementById('generateBill').onclick=()=>{if(!cart.length)return alert('Cart empty');for(const c of cart){const p=products.find(x=>x.id===c.id);if(!p||p.stock<c.qty)return alert('Insufficient stock')}const invoiceNo='INV'+Date.now();const date=new Date().toLocaleString();let sub=0;const items=cart.map(c=>{const p=products.find(x=>x.id===c.id);const amt=p.price*c.qty;sub+=amt;return{name:p.name,price:p.price,qty:c.qty,amt}});items.forEach(it=>{const p=products.find(x=>x.name===it.name);p.stock-=it.qty});const sale={invoiceNo,date,items,subtotal:sub,total:sub};sales.push(sale);save();refreshProductsTable();cart=[];renderCart();showInvoice(sale)}
-function showInvoice(sale){invoiceContent.innerHTML=`<h2>Paras Haldiram</h2><table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br><table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>${sale.items.map(it=>`<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.amt)}</td></tr>`).join('')}<tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr></table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;invoicePrint.style.display='block';lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`}
-document.getElementById('printLast').onclick=()=>{if(!invoiceContent.innerHTML)return alert('No invoice');window.print()}
-function init(){load();refreshProductsTable();renderCart()}init();
-</script>
+  </div>
+
+  <script>
+    const productForm = document.getElementById('product-form');
+    const inventoryTableBody = document.querySelector('#inventory-table tbody');
+    const billForm = document.getElementById('bill-form');
+    const billBody = document.getElementById('bill-body');
+    const billDate = document.getElementById('bill-date');
+    const invoiceNo = document.getElementById('invoice-no');
+    const grandTotal = document.getElementById('grand-total');
+
+    let products = JSON.parse(localStorage.getItem('inventory')) || [];
+    let invoiceCount = parseInt(localStorage.getItem('invoiceCount')) || 1000;
+
+    function saveProducts() {
+      localStorage.setItem('inventory', JSON.stringify(products));
+    }
+
+    function renderProducts() {
+      inventoryTableBody.innerHTML = '';
+      products.forEach((p, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td class="${p.qty < 5 ? 'stock-alert' : ''}">${p.qty}</td>
+          <td>${p.price}</td>
+          <td>
+            <button onclick="editProduct(${index})">Edit</button>
+            <button onclick="deleteProduct(${index})">Delete</button>
+          </td>
+        `;
+        inventoryTableBody.appendChild(tr);
+      });
+    }
+
+    productForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('product-name').value.trim();
+      const qty = parseInt(document.getElementById('product-qty').value);
+      const price = parseFloat(document.getElementById('product-price').value);
+
+      const existing = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (existing) existing.qty += qty;
+      else products.push({ name, qty, price });
+
+      saveProducts();
+      renderProducts();
+      productForm.reset();
+    });
+
+    function editProduct(index) {
+      const newQty = prompt('Enter new quantity:', products[index].qty);
+      const newPrice = prompt('Enter new price:', products[index].price);
+      if (newQty !== null && newPrice !== null) {
+        products[index].qty = parseInt(newQty);
+        products[index].price = parseFloat(newPrice);
+        saveProducts();
+        renderProducts();
+      }
+    }
+
+    function deleteProduct(index) {
+      if (confirm('Delete this product?')) {
+        products.splice(index, 1);
+        saveProducts();
+        renderProducts();
+      }
+    }
+
+    billForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('bill-product').value.trim();
+      const qty = parseInt(document.getElementById('bill-qty').value);
+
+      const product = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (!product) return alert('Product not found!');
+      if (product.qty < qty) return alert('Not enough stock!');
+
+      product.qty -= qty;
+      saveProducts();
+      renderProducts();
+
+      const total = qty * product.price;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${product.name}</td>
+        <td>${qty}</td>
+        <td>${product.price}</td>
+        <td>${total}</td>
+      `;
+      billBody.appendChild(tr);
+
+      let currentTotal = parseFloat(grandTotal.textContent) || 0;
+      grandTotal.textContent = (currentTotal + total).toFixed(2);
+
+      billDate.textContent = new Date().toLocaleString();
+      const invoiceNumber = 'INV' + Date.now();
+      invoiceNo.textContent = invoiceNumber;
+      invoiceCount++;
+      localStorage.setItem('invoiceCount', invoiceCount);
+
+      billForm.reset();
+    });
+
+    // Print
+    document.getElementById('print-btn').addEventListener('click', () => {
+      window.print();
+    });
+
+    // Download PDF
+    document.getElementById('download-btn').addEventListener('click', async () => {
+      const element = document.getElementById('bill-print-area');
+      const opt = {
+        margin: 10,
+        filename: `Invoice_${invoiceNo.textContent}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      const script = document.createElement('script');
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.onload = () => html2pdf().from(element).set(opt).save();
+      document.body.appendChild(script);
+    });
+
+    renderProducts();
+  </script>
 </body>
 </html>
+
