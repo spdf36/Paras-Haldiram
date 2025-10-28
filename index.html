@@ -200,7 +200,7 @@
     });
 
     const low = products.filter(x => x.stock <= (x.threshold || 0));
-    lowStockBanner.innerHTML = low.length ? `<span style='color:#c62828'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 'All products are sufficiently stocked.';
+    lowStockBanner.innerHTML = low.length ? `<span style='color:#c62828; font-size:25px'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 'All products are sufficiently stocked.';
   }
 
   // Expose edit/delete to global for inline handlers
