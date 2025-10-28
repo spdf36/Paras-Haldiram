@@ -37,13 +37,9 @@
     .invoice-actions{text-align:center;margin-top:10px;}
     .invoice-actions button{margin:0 5px;background:#d35400;color:white;border:0;padding:8px 12px;border-radius:6px;cursor:pointer;}
     .invoice-actions button:hover{background:#a84400;}
-
-    #previous-bills-section{margin-top:40px;}
-    #previous-bills-section table{background:#fff;border-collapse:collapse;width:100%;font-size:14px;}
-    #previous-bills-section th{background:#f3f3f3;}
-    #previous-bills-section td,th{border:1px solid #ddd;padding:8px;}
-    #previous-bills-section button{background:#d35400;color:white;border:0;padding:5px 8px;border-radius:4px;cursor:pointer;}
-    #previous-bills-section button:hover{background:#a84400;}
+    #previousBills ul{list-style:none;padding:0;margin:0;max-height:200px;overflow:auto;}
+    #previousBills li{padding:6px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+    #previousBills button{padding:3px 6px;font-size:12px;margin-left:5px;}
 
     @media print{
       body *{visibility:hidden;}
@@ -79,13 +75,6 @@
         <tbody></tbody>
       </table>
     </div>
-    <div id="previous-bills-section" class="card" style="display:none;">
-      <h3>Previous Generated Bills</h3>
-      <table>
-        <thead><tr><th>Invoice ID</th><th>Date</th><th>Total</th><th>Action</th></tr></thead>
-        <tbody id="previousBillsBody"></tbody>
-      </table>
-    </div>
   </section>
   <aside>
     <div class="card">
@@ -99,6 +88,7 @@
       <button id="generateBill">Generate Bill</button>
       <button id="clearCart" style="background:#777">Clear</button>
     </div>
+
     <div class="card">
       <h3>Last Invoice</h3>
       <div id="lastInvoiceArea" class="muted">None</div>
@@ -109,6 +99,11 @@
         <button id="printCustomerCopy">Print Customer Copy</button>
       </div>
     </div>
+
+    <div class="card" id="previousBills">
+      <h3>Previous Bills</h3>
+      <ul id="billList"></ul>
+    </div>
   </aside>
 </main>
 
@@ -116,43 +111,58 @@
   <div id="invoiceContent" class="invoice-box"></div>
 </div>
 
-<!-- html2pdf.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
-const KEY_PRODUCTS='ph_products_v2',KEY_SALES='ph_sales_v2',KEY_BILLS='ph_bills_v1';
+const KEY_PRODUCTS='ph_products_v3',KEY_SALES='ph_sales_v3';
 let products=[],sales=[],cart=[],editingId=null;
-const p_name=document.getElementById('p_name'),p_price=document.getElementById('p_price'),p_stock=document.getElementById('p_stock'),p_threshold=document.getElementById('p_threshold'),productsTableBody=document.querySelector('#productsTable tbody'),selectProduct=document.getElementById('selectProduct'),cartList=document.getElementById('cartList'),cartTotalEl=document.getElementById('cartTotal'),lowStockBanner=document.getElementById('lowStockBanner'),invoiceContent=document.getElementById('invoiceContent'),invoicePrint=document.getElementById('invoicePrint'),lastInvoiceArea=document.getElementById('lastInvoiceArea');
+const els={
+  p_name:document.getElementById('p_name'),
+  p_price:document.getElementById('p_price'),
+  p_stock:document.getElementById('p_stock'),
+  p_threshold:document.getElementById('p_threshold'),
+  productsTableBody:document.querySelector('#productsTable tbody'),
+  selectProduct:document.getElementById('selectProduct'),
+  cartList:document.getElementById('cartList'),
+  cartTotal:document.getElementById('cartTotal'),
+  lowStockBanner:document.getElementById('lowStockBanner'),
+  invoiceContent:document.getElementById('invoiceContent'),
+  invoicePrint:document.getElementById('invoicePrint'),
+  lastInvoiceArea:document.getElementById('lastInvoiceArea'),
+  billList:document.getElementById('billList')
+};
 
 function uid(){return'p'+Date.now()+Math.floor(Math.random()*9999)}
 function money(n){return'₹'+Number(n).toFixed(2)}
 function save(){localStorage.setItem(KEY_PRODUCTS,JSON.stringify(products));localStorage.setItem(KEY_SALES,JSON.stringify(sales))}
-function load(){products=JSON.parse(localStorage.getItem(KEY_PRODUCTS)||'[]');sales=JSON.parse(localStorage.getItem(KEY_SALES)||'[]')}
+function load(){
+  products=JSON.parse(localStorage.getItem(KEY_PRODUCTS)||'[]');
+  sales=JSON.parse(localStorage.getItem(KEY_SALES)||'[]');
+}
+
 function refreshProductsTable(){
-  productsTableBody.innerHTML='';
+  els.productsTableBody.innerHTML='';
   products.forEach(p=>{
     const tr=document.createElement('tr');
-    if(p.stock<= (p.threshold||0))tr.classList.add('low-stock');
+    if(p.stock<=(p.threshold||0))tr.classList.add('low-stock');
     tr.innerHTML=`<td>${p.name}</td><td>${money(p.price)}</td><td>${p.stock}</td><td>${p.threshold||0}</td><td><button onclick="editProduct('${p.id}')">Edit</button> <button onclick="deleteProduct('${p.id}')" style="background:#c62828">Del</button></td>`;
-    productsTableBody.appendChild(tr)
+    els.productsTableBody.appendChild(tr)
   });
-  selectProduct.innerHTML='';
+  els.selectProduct.innerHTML='';
   products.forEach(p=>{
     const o=document.createElement('option');
-    o.value=p.id;
-    o.textContent=`${p.name} (${p.stock})`;
-    selectProduct.appendChild(o)
+    o.value=p.id;o.textContent=`${p.name} (${p.stock})`;
+    els.selectProduct.appendChild(o)
   });
   const low=products.filter(x=>x.stock<=(x.threshold||0));
-  lowStockBanner.innerHTML=low.length?`<span style='color:#c62828'>Low stock: ${low.map(x=>x.name+' ('+x.stock+')').join(', ')}</span>`:'All products are sufficiently stocked.'
+  els.lowStockBanner.innerHTML=low.length?`<span style='color:#c62828'>Low stock: ${low.map(x=>x.name+' ('+x.stock+')').join(', ')}</span>`:'All products are sufficiently stocked.'
 }
 
 function editProduct(id){
   const p=products.find(x=>x.id===id);
   if(!p)return;
-  p_name.value=p.name;p_price.value=p.price;p_stock.value=p.stock;p_threshold.value=p.threshold;
-  editingId=id;
-  document.getElementById('saveProduct').textContent='Update'
+  els.p_name.value=p.name;els.p_price.value=p.price;els.p_stock.value=p.stock;els.p_threshold.value=p.threshold;
+  editingId=id;document.getElementById('saveProduct').textContent='Update'
 }
 
 function deleteProduct(id){
@@ -163,7 +173,7 @@ function deleteProduct(id){
 
 document.getElementById('productForm').onsubmit=e=>{
   e.preventDefault();
-  const n=p_name.value.trim(),pr=parseFloat(p_price.value),st=parseInt(p_stock.value),th=parseInt(p_threshold.value)||0;
+  const n=els.p_name.value.trim(),pr=parseFloat(els.p_price.value),st=parseInt(els.p_stock.value),th=parseInt(els.p_threshold.value)||0;
   if(!n)return;
   if(editingId){
     Object.assign(products.find(x=>x.id===editingId),{name:n,price:pr,stock:st,threshold:th});
@@ -173,7 +183,7 @@ document.getElementById('productForm').onsubmit=e=>{
 };
 
 function renderCart(){
-  cartList.innerHTML='';
+  els.cartList.innerHTML='';
   let total=0;
   cart.forEach(c=>{
     const p=products.find(x=>x.id===c.id);if(!p)return;
@@ -181,27 +191,27 @@ function renderCart(){
     const d=document.createElement('div');
     d.className='cart-item';
     d.innerHTML=`<div>${p.name} × ${c.qty}</div><div>${money(amt)}</div>`;
-    cartList.appendChild(d)
+    els.cartList.appendChild(d)
   });
-  cartTotalEl.textContent=money(total)
+  els.cartTotal.textContent=money(total)
 }
 
 document.getElementById('addToCart').onclick=()=>{
-  const pid=selectProduct.value,qty=parseInt(document.getElementById('cartQty').value)||1;
+  const pid=els.selectProduct.value,qty=parseInt(document.getElementById('cartQty').value)||1;
   const p=products.find(x=>x.id===pid);
   if(!p)return alert('No product');
   if(qty>p.stock)return alert('Not enough stock');
   const ex=cart.find(c=>c.id===pid);
   if(ex)ex.qty+=qty;else cart.push({id:pid,qty});
   renderCart()
-}
+};
 document.getElementById('clearCart').onclick=()=>{cart=[];renderCart()}
 
 document.getElementById('generateBill').onclick=()=>{
   if(!cart.length)return alert('Cart empty');
   for(const c of cart){
     const p=products.find(x=>x.id===c.id);
-    if(!p||p.stock<c.qty)return alert('Insufficient stock')
+    if(!p||p.stock<c.qty)return alert('Insufficient stock');
   }
   const invoiceNo='INV'+Date.now();
   const date=new Date().toLocaleString();
@@ -212,88 +222,94 @@ document.getElementById('generateBill').onclick=()=>{
     return{name:p.name,price:p.price,qty:c.qty,amt}
   });
   items.forEach(it=>{
-    const p=products.find(x=>x.name===it.name);p.stock-=it.qty
+    const p=products.find(x=>x.name===it.name);p.stock-=it.qty;
   });
   const sale={invoiceNo,date,items,subtotal:sub,total:sub};
-  sales.push(sale);save();refreshProductsTable();cart=[];renderCart();showInvoice(sale)
+  sales.push(sale);save();
+  refreshProductsTable();cart=[];renderCart();
+  showInvoice(sale);renderPreviousBills();
 }
 
 function showInvoice(sale){
-  invoiceContent.innerHTML=`<h2>Paras Haldiram</h2><table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br><table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>${sale.items.map(it=>`<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.amt)}</td></tr>`).join('')}<tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr></table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;
-  invoicePrint.style.display='block';
-  lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`;
-  saveBillRecord(sale.invoiceNo, sale.date, sale.total, invoiceContent.innerHTML);
+  els.invoiceContent.innerHTML=`
+  <h2>Paras Haldiram</h2>
+  <table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td>
+  <td style='text-align:right'>Customer Copy</td></tr></table><br>
+  <table>
+    <tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>
+    ${sale.items.map(it=>`<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.amt)}</td></tr>`).join('')}
+    <tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr>
+  </table>
+  <br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;
+  els.invoicePrint.style.display='block';
+  els.lastInvoiceArea.innerHTML=`Invoice ${sale.invoiceNo} — ${sale.date}`;
 }
 
 document.getElementById('printLast').onclick=()=>{
-  if(!invoiceContent.innerHTML)return alert('No invoice');
-  window.print()
+  if(!els.invoiceContent.innerHTML)return alert('No invoice');
+  window.print();
 }
 
 document.getElementById('downloadCustomerCopy').onclick=()=>{
-  if(!invoiceContent.innerHTML)return alert('No invoice to download');
+  if(!els.invoiceContent.innerHTML)return alert('No invoice to download');
   const last=sales[sales.length-1];
   const opt={
     margin:10,
-    filename:last?`${last.invoiceNo}.pdf`:'Customer_Copy.pdf',
+    filename:`${last.invoiceNo}_CustomerCopy.pdf`,
     image:{type:'jpeg',quality:0.98},
     html2canvas:{scale:2},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
   };
-  html2pdf().set(opt).from(invoiceContent).save();
-}
+  html2pdf().set(opt).from(els.invoiceContent).save();
+};
 
 document.getElementById('printCustomerCopy').onclick=()=>{
-  if(!invoiceContent.innerHTML)return alert('No invoice to print');
+  if(!els.invoiceContent.innerHTML)return alert('No invoice to print');
   const win=window.open('', '_blank','width=800,height=600');
-  win.document.write(`<html><head><title>Customer Copy</title></head><body>${invoiceContent.innerHTML}</body></html>`);
+  win.document.write(`<html><head><title>Customer Copy</title></head><body>${els.invoiceContent.innerHTML}</body></html>`);
   win.document.close();
   win.print();
-}
+};
 
-// ---- Previous Bills Logic ----
-function saveBillRecord(invoiceId,date,total,billHTML){
-  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
-  bills.push({invoiceId,date,total,billHTML});
-  localStorage.setItem(KEY_BILLS,JSON.stringify(bills));
-  loadPreviousBills();
-}
-
-function loadPreviousBills(){
-  const tbody=document.getElementById("previousBillsBody");
-  const section=document.getElementById("previous-bills-section");
-  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
-  tbody.innerHTML='';
-  if(!bills.length){section.style.display='none';return;}
-  section.style.display='block';
-  bills.forEach(b=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${b.invoiceId}</td><td>${b.date}</td><td>${money(b.total)}</td><td><button onclick="viewBill('${b.invoiceId}')">View</button> <button onclick="downloadBill('${b.invoiceId}')">Download</button></td>`;
-    tbody.appendChild(tr);
+function renderPreviousBills(){
+  els.billList.innerHTML='';
+  if(!sales.length){els.billList.innerHTML='<li>No bills yet.</li>';return;}
+  sales.slice().reverse().forEach(s=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<span>${s.invoiceNo}<br><small>${s.date}</small></span>
+    <div>
+      <button onclick="viewBill('${s.invoiceNo}')">View</button>
+      <button onclick="downloadBill('${s.invoiceNo}')">Download</button>
+    </div>`;
+    els.billList.appendChild(li);
   });
 }
 
-function viewBill(id){
-  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
-  const b=bills.find(x=>x.invoiceId===id);
-  if(b){
-    const win=window.open('', '_blank','width=800,height=600');
-    win.document.write(`<html><head><title>${b.invoiceId}</title></head><body>${b.billHTML}</body></html>`);
-    win.document.close();
-  }
+function viewBill(inv){
+  const s=sales.find(x=>x.invoiceNo===inv);
+  if(!s)return;
+  showInvoice(s);
 }
 
-function downloadBill(id){
-  let bills=JSON.parse(localStorage.getItem(KEY_BILLS)||'[]');
-  const b=bills.find(x=>x.invoiceId===id);
-  if(b){
-    const opt={margin:10,filename:`${b.invoiceId}.pdf`,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
-    html2pdf().set(opt).from(b.billHTML).save();
-  }
+function downloadBill(inv){
+  const s=sales.find(x=>x.invoiceNo===inv);
+  if(!s)return;
+  showInvoice(s);
+  const opt={
+    margin:10,
+    filename:`${s.invoiceNo}_CustomerCopy.pdf`,
+    image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  };
+  html2pdf().set(opt).from(els.invoiceContent).save();
 }
 
-function init(){load();refreshProductsTable();renderCart();loadPreviousBills();}
+function init(){
+  load();refreshProductsTable();renderCart();renderPreviousBills();
+}
 init();
 </script>
 </body>
 </html>
+
