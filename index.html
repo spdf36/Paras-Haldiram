@@ -169,7 +169,11 @@
 
   /* helpers */
   function money(n){ return '₹' + Number(n).toFixed(2); }
-  function invoiceIdNow(){ return 'INV' + Date.now(); }
+  async function getNextInvoiceNumber(){
+  const salesSnap = await getDocs(collection(db, 'sales'));
+  const count = salesSnap.size + 1;   // next bill no.
+  return "INV" + String(count).padStart(3, '0');  // INV001, INV002
+}
 
   /* --- PRODUCTS: load/render/save/update/delete --- */
   async function loadProductsFromFirestore(){
@@ -291,7 +295,7 @@
       if (c.qty > p.stock) return alert(`Insufficient stock for ${c.name}`);
     }
 
-    const invoiceNo = invoiceIdNow();
+    const invoiceNo = await getNextInvoiceNumber();
     const date = new Date().toLocaleString();
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
 const customerName = document.getElementById("customerName").value.trim() || "N/A";
