@@ -293,7 +293,21 @@
     const invoiceNo = invoiceIdNow();
     const date = new Date().toLocaleString();
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const saleDoc = { invoiceNo, date, items: cart.map(i => ({ name: i.name, id: i.id, price: i.price, qty: i.qty })), subtotal, total: subtotal };
+const customerName = document.getElementById("customerName").value.trim() || "N/A";
+
+const saleDoc = {
+  invoiceNo,
+  date,
+  customerName,
+  items: cart.map(i => ({
+    name: i.name,
+    id: i.id,
+    price: i.price,
+    qty: i.qty
+  })),
+  subtotal,
+  total: subtotal
+};
 
     // Save sale to Firestore
     const saleRef = await addDoc(collection(db, 'sales'), saleDoc);
@@ -369,10 +383,9 @@
 
       <!-- Customer Name + Bill No -->
       <div style="display:flex;justify-content:space-between;font-size:16px;color:black;">
-          <div>Name: ________________________</div>
-          <div>Bill No.: <b>${sale.invoiceNo}</b></div>
-      </div>
-      <br>
+    <div>Name: <b>${sale.customerName || "N/A"}</b></div>
+    <div>Bill No.: <b>${sale.invoiceNo}</b></div>
+</div>
 
       <!-- Table -->
       <table class="memo-table">
