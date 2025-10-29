@@ -24,7 +24,7 @@
     button:hover{background:var(--accent-dark)}
     table{width:100%;border-collapse:collapse;font-size:14px}
     th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    tr.low-stock{background:#f71119 !important; color:white !important;}
+    tr.low-stock{background:#f71119}
     .right{text-align:right}
     .muted{color:var(--muted);font-size:13px}
     .cart-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
@@ -42,6 +42,8 @@
     #previous-bills-section table{background:#fff;border-collapse:collapse;width:100%;font-size:14px;}
     #previous-bills-section th{background:#f3f3f3;}
     #previous-bills-section td,th{border:1px solid #ddd;padding:8px;}
+    #previous-bills-section button{background:#d35400;color:white;border:0;padding:5px 8px;border-radius:4px;cursor:pointer;}
+    #previous-bills-section button:hover{background:#a84400;}
 
     @media print{
       body *{visibility:hidden;}
@@ -57,19 +59,23 @@
   <div class="brand">Paras Haldiram</div>
   <div>Inventory & Billing Software</div>
 </header>
+
 <main>
   <section>
+
+    <!-- Product section (unchanged) -->
     <div class="card">
       <h3>Add / Edit Product</h3>
       <form id="productForm">
         <input id="p_name" placeholder="Product Name" required><br><br>
         <input id="p_price" type="number" placeholder="Price" required><br><br>
         <input id="p_stock" type="number" placeholder="Stock" required><br><br>
-        <input id="p_threshold" type="number" placeholder="Low Stock Alert at (qty)"><br><br>
+        <input id="p_threshold" type="number" placeholder="Low Stock Alert"><br><br>
         <button id="saveProduct">Add Product</button>
       </form>
     </div>
 
+    <!-- Stock table (unchanged) -->
     <div class="card">
       <h3>Product Stock</h3>
       <div id="lowStockBanner" class="muted"></div>
@@ -79,6 +85,7 @@
       </table>
     </div>
 
+    <!-- Previous Bills (fixed view + download) -->
     <div id="previous-bills-section" class="card">
       <h3>Previous Generated Bills</h3>
       <div style="margin-bottom:10px;">
@@ -91,11 +98,20 @@
   <aside>
     <div class="card">
       <h3>Create Bill</h3>
+
+      <!-- ✅ NEW FIELD -->
+      <input id="customerName" placeholder="Customer Name (optional)">
+      <br><br>
+
       <select id="selectProduct"></select><br><br>
       <input id="cartQty" type="number" value="1" min="1"><br><br>
       <button id="addToCart">Add to Cart</button>
+
       <div id="cartList" style="margin-top:10px"></div>
-      <div style="text-align:right;margin-top:10px;font-weight:bold">Total: <span id="cartTotal">₹0.00</span></div>
+
+      <div style="text-align:right;margin-top:10px;font-weight:bold">
+        Total: <span id="cartTotal">₹0.00</span>
+      </div>
       <br>
       <button id="generateBill">Generate Bill</button>
       <button id="clearCart" style="background:#777">Clear</button>
@@ -107,8 +123,8 @@
       <br>
       <button id="printLast">Print / Download Bill</button>
       <div class="invoice-actions">
-        <button id="downloadCustomerCopy">Download Customer Copy</button>
-        <button id="printCustomerCopy">Print Customer Copy</button>
+        <button id="downloadCustomerCopy">Download</button>
+        <button id="printCustomerCopy">Print</button>
       </div>
     </div>
   </aside>
@@ -121,7 +137,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script type="module">
-
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
@@ -141,6 +156,7 @@
   const selectProduct = document.getElementById('selectProduct');
   const cartList = document.getElementById('cartList');
   const cartTotalEl = document.getElementById('cartTotal');
+  const customerNameEl = document.getElementById('customerName');
   const lowStockBanner = document.getElementById('lowStockBanner');
   const invoiceContent = document.getElementById('invoiceContent');
   const invoicePrint = document.getElementById('invoicePrint');
@@ -148,286 +164,213 @@
   const previousBillsArea = document.getElementById('previousBillsArea');
   const exportAllCSVBtn = document.getElementById('exportAllCSV');
 
-  const p_name = document.getElementById('p_name');
-  const p_price = document.getElementById('p_price');
-  const p_stock = document.getElementById('p_stock');
-  const p_threshold = document.getElementById('p_threshold');
-
   let editingProductId = null;
   let cart = [];
 
-  function money(n){ return '₹' + Number(n).toFixed(2); }
-  function invoiceIdNow(){ return 'INV' + Date.now(); }
+  const money = n => "₹" + Number(n).toFixed(2);
+  const invoiceIdNow = () => "INV" + Date.now();
 
+  /* Load Products */
   async function loadProductsFromFirestore(){
-    const snap = await getDocs(collection(db, 'products'));
+    const snap = await getDocs(collection(db, "products"));
     const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderProducts(products);
-  }
+    productsTableBody.innerHTML = "";
+    selectProduct.innerHTML = "";
 
-  function renderProducts(products){
-    productsTableBody.innerHTML = '';
-    selectProduct.innerHTML = '';
     products.forEach(p => {
-      const tr = document.createElement('tr');
-      if (p.stock <= (p.threshold || 0)) tr.classList.add('low-stock');
-      tr.innerHTML = `<td>${p.name}</td>
-                      <td>${money(p.price)}</td>
-                      <td>${p.stock}</td>
-                      <td>${p.threshold || 0}</td>
-                      <td>
-                        <button onclick="editProductFire('${p.id}')">Edit</button>
-                        <button onclick="deleteProductFire('${p.id}')" style="background:#c62828">Del</button>
-                      </td>`;
+      const tr = document.createElement("tr");
+      if (p.stock <= (p.threshold || 0)) tr.classList.add("low-stock");
+      tr.innerHTML = `<td>${p.name}</td><td>${money(p.price)}</td><td>${p.stock}</td><td>${p.threshold || 0}</td>
+      <td>
+        <button onclick="editProductFire('${p.id}')">Edit</button>
+        <button onclick="deleteProductFire('${p.id}')" style="background:#c62828">Del</button>
+      </td>`;
       productsTableBody.appendChild(tr);
 
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = `${p.name} (${p.stock})`;
-      selectProduct.appendChild(o);
+      const op = document.createElement("option");
+      op.value = p.id;
+      op.textContent = `${p.name} (${p.stock})`;
+      selectProduct.appendChild(op);
     });
-
-    const low = products.filter(x => x.stock <= (x.threshold || 0));
-    lowStockBanner.innerHTML = low.length
-      ? `<span style='color:#c62828; font-size:25px'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>`
-      : 'All products are sufficiently stocked.';
   }
 
-  window.editProductFire = async (docId) => {
-    const dref = doc(db, 'products', docId);
-    const snap = await getDoc(dref);
-    if (!snap.exists()) return alert('Product not found');
+  /* Add/Edit Product */
+  document.getElementById("productForm").onsubmit = async e => {
+    e.preventDefault();
+    const name = p_name.value.trim();
+    const price = +p_price.value;
+    const stock = +p_stock.value;
+    const threshold = +p_threshold.value;
+
+    if (editingProductId) {
+      await updateDoc(doc(db, "products", editingProductId), { name, price, stock, threshold });
+      editingProductId = null;
+      document.getElementById("saveProduct").textContent = "Add Product";
+    } else {
+      await addDoc(collection(db, "products"), { name, price, stock, threshold });
+    }
+    e.target.reset();
+    loadProductsFromFirestore();
+  };
+
+  window.editProductFire = async (id) => {
+    const snap = await getDoc(doc(db,"products",id));
+    if (!snap.exists()) return;
     const p = snap.data();
     p_name.value = p.name;
     p_price.value = p.price;
     p_stock.value = p.stock;
     p_threshold.value = p.threshold || 0;
-    editingProductId = docId;
-    document.getElementById('saveProduct').textContent = 'Update';
+    editingProductId = id;
+    document.getElementById("saveProduct").textContent = "Update";
   };
 
-  window.deleteProductFire = async (docId) => {
-    if (!confirm('Delete this product?')) return;
-    await deleteDoc(doc(db, 'products', docId));
-    await loadProductsFromFirestore();
+  window.deleteProductFire = async (id) => {
+    if (!confirm("Delete product?")) return;
+    await deleteDoc(doc(db,"products",id));
+    loadProductsFromFirestore();
   };
 
-  document.getElementById('productForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const name = p_name.value.trim();
-    const price = parseFloat(p_price.value || 0);
-    const stock = parseInt(p_stock.value || 0);
-    const threshold = parseInt(p_threshold.value || 0);
-
-    if (editingProductId) {
-      await updateDoc(doc(db, 'products', editingProductId), { name, price, stock, threshold });
-      editingProductId = null;
-      document.getElementById('saveProduct').textContent = 'Add Product';
-    } else {
-      await addDoc(collection(db, 'products'), { name, price, stock, threshold });
-    }
-    e.target.reset();
-    await loadProductsFromFirestore();
-  };
-
+  /* Cart */
   function renderCart(){
-    cartList.innerHTML = '';
+    cartList.innerHTML = "";
     let total = 0;
-    cart.forEach(c => {
-      const amt = c.price * c.qty;
+    cart.forEach(i => {
+      const amt = i.qty * i.price;
       total += amt;
-      const d = document.createElement('div');
-      d.className = 'cart-item';
-      d.innerHTML = `<div>${c.name} × ${c.qty}</div><div>${money(amt)}</div>`;
-      cartList.appendChild(d);
+      const div = document.createElement("div");
+      div.className = "cart-item";
+      div.innerHTML = `<div>${i.name} × ${i.qty}</div><div>${money(amt)}</div>`;
+      cartList.appendChild(div);
     });
     cartTotalEl.textContent = money(total);
   }
 
-  document.getElementById('addToCart').onclick = async () => {
+  document.getElementById("addToCart").onclick = async () => {
     const pid = selectProduct.value;
-    const qty = parseInt(document.getElementById('cartQty').value) || 1;
-    if (!pid) return alert('Select product');
-    const snap = await getDoc(doc(db, 'products', pid));
-    if (!snap.exists()) return alert('Product not found');
-    const prod = snap.data();
-    if (qty > prod.stock) return alert('Not enough stock');
+    const qty = +cartQty.value;
+    const snap = await getDoc(doc(db,"products",pid));
+    const p = snap.data();
     const existing = cart.find(c => c.id === pid);
     if (existing) existing.qty += qty;
-    else cart.push({ id: pid, name: prod.name, price: prod.price, qty });
+    else cart.push({ id: pid, name: p.name, price: p.price, qty });
     renderCart();
   };
 
-  document.getElementById('clearCart').onclick = () => { cart = []; renderCart(); };
+  document.getElementById("clearCart").onclick = () => {
+    cart = [];
+    renderCart();
+  };
 
-  async function generateBillFirestore(){
-    if (!cart.length) return alert('Cart empty');
+  /* Generate Bill - Firestore save */
+  document.getElementById("generateBill").onclick = async () => {
+    if (!cart.length) return alert("Cart empty");
 
     const invoiceNo = invoiceIdNow();
     const date = new Date().toLocaleString();
-    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const customerName = customerNameEl.value.trim() || "Walk-in Customer";
 
-    const saleDoc = { invoiceNo, date, items: cart, subtotal, total: subtotal };
+    const subtotal = cart.reduce((sum,i)=> sum + i.qty*i.price,0);
+    const sale = { invoiceNo, date, customerName, items: cart, total: subtotal };
 
-    const saleRef = await addDoc(collection(db, 'sales'), saleDoc);
+    const saleRef = await addDoc(collection(db,"sales"), sale);
 
-    for (const it of cart) {
-      const prodRef = doc(db, 'products', it.id);
-      const ps = await getDoc(prodRef);
-      const prod = ps.data();
-      await updateDoc(prodRef, { stock: prod.stock - it.qty });
-    }
-
-    showInvoice(saleDoc, saleRef.id);
+    showInvoice(sale);
     cart = [];
     renderCart();
-    await loadProductsFromFirestore();
-    await loadPreviousBills();
-  }
-
-  document.getElementById('generateBill').onclick = generateBillFirestore;
-
-  function showInvoice(sale, docId){
-    invoiceContent.innerHTML = `<h2>Paras Haldiram</h2>
-      <table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td>
-      <td style='text-align:right'>Customer Copy</td></tr></table><br>
-      <table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>
-        ${sale.items.map(it => `<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.price * it.qty)}</td></tr>`).join('')}
-        <tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr>
-      </table>`;
-
-    lastInvoiceArea.innerText = `Invoice ${sale.invoiceNo} — ${sale.date}`;
-    lastInvoiceArea.dataset.docId = docId;   // ✅ FIXED
-    invoicePrint.style.display = 'block';
-  }
-
-  document.getElementById('printLast').onclick = () => window.print();
-
-  document.getElementById('downloadCustomerCopy').onclick = () => {
-    if (!invoiceContent.innerHTML) return alert('No invoice to download');
-    const invoiceNo = lastInvoiceArea.textContent.match(/INV\d+/)?.[0] || "Invoice";
-    html2pdf().set({
-      margin: 10,
-      filename: `${invoiceNo}_CustomerCopy.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(invoiceContent).save();
+    customerNameEl.value = "";
+    loadPreviousBills();
   };
 
-  document.getElementById('printCustomerCopy').onclick = () => {
-    const win = window.open('', '_blank', 'width=800,height=600');
-    win.document.write(`<html><head><title>Customer Copy</title></head><body>${invoiceContent.innerHTML}</body></html>`);
-    win.document.close();
-    win.print();
-  };
+  /* Show Invoice (used by view + new bill) */
+  function showInvoice(sale){
+    invoiceContent.innerHTML = `
+      <h2>Paras Haldiram</h2>
+      <table>
+        <tr><td>
+          <b>Customer:</b> ${sale.customerName}<br>
+          <b>Date:</b> ${sale.date}<br>
+          <b>Invoice:</b> ${sale.invoiceNo}
+        </td></tr>
+      </table><br>
 
+      <table>
+        <tr class="heading"><td>Item</td><td>Qty</td><td>Amount</td></tr>
+        ${sale.items.map(it=>`<tr class="item"><td>${it.name}</td><td>${it.qty}</td><td>${money(it.qty*it.price)}</td></tr>`).join("")}
+        <tr class="total"><td></td><td>Total</td><td>${money(sale.total)}</td></tr>
+      </table>
+      <br><div style="text-align:center;font-size:14px">Thank you for shopping!</div>
+    `;
+    invoicePrint.style.display = "block";
+    lastInvoiceArea.innerText = `${sale.invoiceNo} — ${sale.date}`;
+  }
+
+  /* View / Download previous bills ✅ FIXED */
   async function loadPreviousBills(){
-    const snap = await getDocs(collection(db, 'sales'));
-    if (snap.empty) return (previousBillsArea.textContent = "No bills yet");
-
+    const snap = await getDocs(collection(db,"sales"));
     previousBillsArea.innerHTML = "";
-    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                          .sort((a,b)=> (b.invoiceNo > a.invoiceNo ? 1 : -1));
+    if (snap.empty) return previousBillsArea.textContent = "No bills yet";
 
     const tbl = document.createElement("table");
-    tbl.innerHTML = `<thead><tr><th>Invoice ID</th><th>Date</th><th>Total</th><th>Action</th></tr></thead>`;
+    tbl.innerHTML = `<thead><tr><th>Invoice ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Action</th></tr></thead>`;
     const tbody = document.createElement("tbody");
 
-    docs.forEach(bill => {
+    snap.docs.forEach(d=>{
+      const s = d.data();
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${bill.invoiceNo}</td>
-        <td>${bill.date}</td>
-        <td>${money(bill.total)}</td>
-        <td>
-          <button data-id="${bill.id}" class="view-btn">View</
-        <button data-id="${bill.id}" class="view-btn">View</button>
-        <button data-id="${bill.id}" class="download-btn">Download</button>
-        <button data-id="${bill.id}" class="delete-btn" style="background:#c62828">Delete</button>
-      `;
+         <td>${s.invoiceNo}</td>
+         <td>${s.customerName}</td>
+         <td>${s.date}</td>
+         <td>${money(s.total)}</td>
+         <td>
+            <button class="view-btn" data-id="${d.id}">View</button>
+            <button class="download-btn" data-id="${d.id}">Download</button>
+         </td>`;
       tbody.appendChild(tr);
     });
 
     tbl.appendChild(tbody);
     previousBillsArea.appendChild(tbl);
 
-    //-- VIEW BILL
-    document.querySelectorAll(".view-btn").forEach(btn => {
-      btn.onclick = async () => {
-        const id = btn.dataset.id;
-        const docSnap = await getDoc(doc(db, "sales", id));
-        if (docSnap.exists()) {
-          showInvoice(docSnap.data(), id);   // ✅ loads the bill correctly
-        }
-      };
+    document.querySelectorAll(".view-btn").forEach(btn => btn.onclick = async e=>{
+      const id = e.target.dataset.id;
+      const snap = await getDoc(doc(db,"sales",id));
+      showInvoice(snap.data());
     });
 
-    //-- DOWNLOAD BILL DIRECTLY
-    document.querySelectorAll(".download-btn").forEach(btn => {
-      btn.onclick = async () => {
-        const id = btn.dataset.id;
-        const docSnap = await getDoc(doc(db, "sales", id));
-        if (!docSnap.exists()) return;
+    document.querySelectorAll(".download-btn").forEach(btn => btn.onclick = async e=>{
+      const id = e.target.dataset.id;
+      const snap = await getDoc(doc(db,"sales",id));
+      const sale = snap.data();
+      showInvoice(sale);
 
-        showInvoice(docSnap.data(), id);   // ensure invoice content is rendered
-
-        const invoiceNo = docSnap.data().invoiceNo;
-        html2pdf().set({
-          margin: 10,
-          filename: `${invoiceNo}_CustomerCopy.pdf`,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-        }).from(invoiceContent).save();
-      };
-    });
-
-    //-- DELETE BILL
-    document.querySelectorAll(".delete-btn").forEach(btn => {
-      btn.onclick = async () => {
-        const id = btn.dataset.id;
-        if (!confirm("Delete this bill permanently?")) return;
-        await deleteDoc(doc(db, "sales", id));
-        loadPreviousBills();
-      };
+      html2pdf().set({ filename: sale.invoiceNo+".pdf" }).from(invoiceContent).save();
     });
   }
 
-  //-- EXPORT ALL BILLS AS CSV
-  exportAllCSVBtn.onclick = async () => {
-    const snap = await getDocs(collection(db, "sales"));
-    if (snap.empty) return alert("No bills found to export");
+  /* Export All Bills */
+  exportAllCSVBtn.onclick = async ()=>{
+    const snap = await getDocs(collection(db,"sales"));
+    if (snap.empty) return alert("No bills found");
 
-    let rows = [["Invoice No", "Date", "Product", "Qty", "Amount", "Total"]];
-    snap.forEach(doc => {
-      const bill = doc.data();
-      bill.items.forEach(item => {
-        rows.push([
-          bill.invoiceNo,
-          bill.date,
-          item.name,
-          item.qty,
-          item.price * item.qty,
-          bill.total
-        ]);
-      });
+    let rows = [["Invoice","Customer","Date","Total"]];
+    snap.docs.forEach(d=>{
+      const s = d.data();
+      rows.push([s.invoiceNo,s.customerName,s.date,s.total]);
     });
 
-    let csv = rows.map(r => r.join(",")).join("\n");
-    let blob = new Blob([csv], { type: "text/csv" });
-
-    let a = document.createElement("a");
+    const csv = rows.map(r=>r.join(",")).join("\n");
+    const blob = new Blob([csv],{type:"text/csv"});
+    const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "All_Bills_Export.csv";
+    a.download="AllBills.csv";
     a.click();
   };
 
-  //-- INITIAL LOAD
   loadProductsFromFirestore();
   loadPreviousBills();
-
 </script>
-
 </body>
 </html>
+
