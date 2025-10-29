@@ -96,7 +96,7 @@
     <div class="card">
       <h3>Create Bill</h3>
       <input id="customerName" placeholder="Customer Name (optional)"><br><br>
-      <input id="Address" placeholder="Address (optional)"><br><br>
+      <input id="address" placeholder="address (optional)"><br><br>
       <select id="selectProduct"></select><br><br>
       <input id="cartQty" type="number" value="1" min="1"><br><br>
       <button id="addToCart">Add to Cart</button>
@@ -295,12 +295,13 @@
     const date = new Date().toLocaleString();
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
 const customerName = document.getElementById("customerName").value.trim() || "N/A";
+const address = document.getElementById("address").value.trim() || "N/A";
 
 const saleDoc = {
   invoiceNo,
   date,
   customerName,
-  address
+  address,
   items: cart.map(i => ({
     name: i.name,
     id: i.id,
@@ -388,7 +389,7 @@ const saleDoc = {
       <!-- Customer Name + Bill No -->
       <div style="display:flex;justify-content:space-between;font-size:16px;color:black;">
     <div>Name: <b>${sale.customerName || "N/A"}</b></div>
-    <div>Name: <b>${sale.Address || "N/A"}</b></div>
+    <div>Name: <b>${sale.address || "N/A"}</b></div>
     <div>Bill No.: <b>${sale.invoiceNo}</b></div>
 </div>
 
