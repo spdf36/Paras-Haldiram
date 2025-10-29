@@ -382,7 +382,7 @@
       if (!docSnap.exists()) return alert('Bill not found');
       showInvoice(docSnap.data(), id);
     });
-   previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
+  previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
   const id = ev.target.dataset.id;
   const docSnap = await getDoc(doc(db, 'sales', id));
   if (!docSnap.exists()) return alert('Bill not found');
@@ -390,8 +390,26 @@
   const s = docSnap.data();
   showInvoice(s, id);
 
-  // ✅ Fix: wait for invoice to render before generating PDF
-  await new Promise(resolve => setTimeout(resolve, 150));
+  // Create a temporary visible clone to ensure html2pdf can render it
+  const temp = document.createElement('div');
+  temp.id = '__tempInvoice';
+  // make it visible and outside layout flow so user doesn't see a flicker
+  Object.assign(temp.style, {
+    position: 'fixed',
+    left: '0',
+    top: '0',
+    width: '210mm',         // A4 width; helps consistent layout
+    padding: '12mm',
+    background: 'white',
+    zIndex: 99999,
+    boxSizing: 'border-box'
+  });
+  temp.innerHTML = invoiceContent.innerHTML;
+
+  document.body.appendChild(temp);
+
+  // small delay so browser paints the temp node
+  await new Promise(resolve => setTimeout(resolve, 120));
 
   const opt = {
     margin: 10,
@@ -401,9 +419,23 @@
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().set(opt).from(invoiceContent).save();
+  try {
+    // html2pdf returns a promise-ish chain; use then to clean up afterwards
+    html2pdf().set(opt).from(temp).save().then(() => {
+      // remove temp after save completes
+      temp.remove();
+    }).catch(err => {
+      // fallback cleanup on error
+      temp.remove();
+      console.error('html2pdf error', err);
+      alert('Failed to generate PDF. See console for details.');
+    });
+  } catch (err) {
+    temp.remove();
+    console.error(err);
+    alert('Failed to generate PDF. See console for details.');
+  }
 });
-
     previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
       const id = ev.target.dataset.id;
       if (!confirm('Delete this bill permanently?')) return;
