@@ -308,27 +308,64 @@
     }
 
     // show invoice and refresh products & previous bills
-    showInvoice(saleDoc, saleRef.id);
-    cart = [];
-    renderCart();
-    await refreshAllProducts();
-    await loadPreviousBills();
-  }
+   function showInvoice(sale, docId){
+  const rows = sale.items.map((it, idx) => `
+      <tr>
+        <td style="border:1px solid #e91b1b; padding:6px; text-align:center;">${idx + 1}</td>
+        <td style="border:1px solid #e91b1b; padding:6px;">${it.name}</td>
+        <td style="border:1px solid #e91b1b; padding:6px; text-align:center;">${it.qty}</td>
+        <td style="border:1px solid #e91b1b; padding:6px; text-align:right;">₹${(it.price * it.qty).toFixed(2)}</td>
+      </tr>
+  `).join("");
 
-  document.getElementById('generateBill').onclick = generateBillFirestore;
+  invoiceContent.innerHTML = `
+  <div style="border:3px solid #e91b1b; padding:18px; font-family:Arial;">
 
-  function showInvoice(sale, docId){
-    invoiceContent.innerHTML = `<h2>Paras Haldiram</h2>
-      <table><tr><td>Shop Bill<br>Date: ${sale.date}<br>Invoice: ${sale.invoiceNo}</td><td style='text-align:right'>Customer Copy</td></tr></table><br>
-      <table><tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>
-        ${sale.items.map(it => `<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>${money(it.price * it.qty)}</td></tr>`).join('')}
-        <tr class='total'><td></td><td>Total</td><td>${money(sale.total)}</td></tr>
-      </table><br><div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>`;
-    invoicePrint.style.display = 'block';
-    lastInvoiceArea.innerText = `Invoice ${sale.invoiceNo} — ${sale.date}`;
-    if (docId) lastInvoiceArea.dataset.docId = docId;
-  }
+    <h2 style="text-align:center; color:#e91b1b; margin:0; font-size:28px;">
+      KHODEL CENTER (PARTY)
+    </h2>
 
+    <div style="text-align:center; font-size:16px; color:#e91b1b; margin-top:4px;">
+      DEALER OF HALDIRAM’S PRODUCTS<br>
+      WHOLESALE & RETAIL
+      <br><small>Papad, Chips, Bhel, Namkeen, Sey, Chutney, Syrup, Biscuits, Chocolate and all Haldiram products.</small>
+      <br>Bardoli Road, near Rajhans School
+      <br><strong>For trade use only</strong>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:18px;">
+      <div>Name: _________________________</div>
+      <div>Bill No.: <strong>${sale.invoiceNo}</strong></div>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:17px;">
+      <thead>
+        <tr style="background:#e91b1b; color:white;">
+          <th style="border:1px solid #e91b1b; padding:6px;">No.</th>
+          <th style="border:1px solid #e91b1b; padding:6px;">Description</th>
+          <th style="border:1px solid #e91b1b; padding:6px;">Quantity</th>
+          <th style="border:1px solid #e91b1b; padding:6px;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:18px;">
+      <div><strong>Final Amount</strong></div>
+      <div><strong>Total: ₹${sale.total.toFixed(2)}</strong></div>
+    </div>
+
+    <div style="text-align:right; margin-top:40px; font-size:18px;">
+      Signature ____________________
+    </div>
+
+  </div>
+  `;
+
+  invoicePrint.style.display = "block";
+  lastInvoiceArea.innerText = `Invoice ${sale.invoiceNo} — ${sale.date}`;
+  if (docId) lastInvoiceArea.dataset.docId = docId;
+}
   /* --- Print / Download --- */
   document.getElementById('printLast').onclick = () => {
     if (!invoiceContent.innerHTML) return alert('No invoice');
