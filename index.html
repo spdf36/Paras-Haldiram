@@ -383,14 +383,27 @@
       showInvoice(docSnap.data(), id);
     });
     previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      const docSnap = await getDoc(doc(db, 'sales', id));
-      if (!docSnap.exists()) return alert('Bill not found');
-      const s = docSnap.data();
-      showInvoice(s, id);
-      const opt = { margin: 10, filename: `${s.invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().set(opt).from(invoiceContent).save();
-    });
+  const id = ev.target.dataset.id;
+  const docSnap = await getDoc(doc(db, 'sales', id));
+  if (!docSnap.exists()) return alert('Bill not found');
+
+  const s = docSnap.data();
+  showInvoice(s, id);
+
+  // ✅ Ensure DOM is rendered before PDF generation
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+  const invoiceElement = document.getElementById("invoiceContent");
+
+  const opt = {
+    margin: 10,
+    filename: `${s.invoiceNo}_CustomerCopy.pdf`,
+    html2canvas: { scale: 3, useCORS: true },   // ✅ High resolution & prevents blank image
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(invoiceElement).save();
+});
     previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
       const id = ev.target.dataset.id;
       if (!confirm('Delete this bill permanently?')) return;
