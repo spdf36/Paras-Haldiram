@@ -24,7 +24,7 @@
     button:hover{background:var(--accent-dark)}
     table{width:100%;border-collapse:collapse;font-size:14px}
     th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    tr.low-stock{background:#f71119}
+    tr.low-stock{background:#fff4e5}
     .right{text-align:right}
     .muted{color:var(--muted);font-size:13px}
     .cart-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
@@ -200,7 +200,7 @@
     });
 
     const low = products.filter(x => x.stock <= (x.threshold || 0));
-    lowStockBanner.innerHTML = low.length ? `<span style='color:#c62828; font-size:25px'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 'All products are sufficiently stocked.';
+    lowStockBanner.innerHTML = low.length ? `<span style='color:#c62828'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 'All products are sufficiently stocked.';
   }
 
   // Expose edit/delete to global for inline handlers
