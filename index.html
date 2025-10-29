@@ -382,15 +382,29 @@
       if (!docSnap.exists()) return alert('Bill not found');
       showInvoice(docSnap.data(), id);
     });
-    previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      const docSnap = await getDoc(doc(db, 'sales', id));
-      if (!docSnap.exists()) return alert('Bill not found');
-      const s = docSnap.data();
-      showInvoice(s, id);
-      const opt = { margin: 10, filename: `${s.invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().set(opt).from(invoiceContent).save();
-    });
+   previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
+  const id = ev.target.dataset.id;
+  const docSnap = await getDoc(doc(db, 'sales', id));
+  if (!docSnap.exists()) return alert('Bill not found');
+
+  const s = docSnap.data();
+  showInvoice(s, id);  // render invoice
+
+  // FIX → Wait for DOM update then clone node for html2pdf
+  setTimeout(() => {
+    const opt = {
+      margin: 10,
+      filename: `${s.invoiceNo}_CustomerCopy.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    const clonedInvoice = invoiceContent.cloneNode(true);
+    html2pdf().set(opt).from(clonedInvoice).save();
+  }, 300); // slight delay ensures DOM rendered
+});
+
     previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
       const id = ev.target.dataset.id;
       if (!confirm('Delete this bill permanently?')) return;
