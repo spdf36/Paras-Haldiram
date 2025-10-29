@@ -383,14 +383,45 @@
       showInvoice(docSnap.data(), id);
     });
     previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      const docSnap = await getDoc(doc(db, 'sales', id));
-      if (!docSnap.exists()) return alert('Bill not found');
-      const s = docSnap.data();
-      showInvoice(s, id);
-      const opt = { margin: 10, filename: `${s.invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().set(opt).from(invoiceContent).save();
-    });
+  const id = ev.target.dataset.id;
+  const docSnap = await getDoc(doc(db, 'sales', id));
+  if (!docSnap.exists()) return alert('Bill not found');
+  const s = docSnap.data();
+
+  // ✅ Create a temporary visible container (not hidden)
+  const temp = document.createElement("div");
+  temp.style.position = "fixed";
+  temp.style.left = "-9999px";  // keep off-screen but rendered
+  temp.innerHTML = `
+    <div class="invoice-box">
+      <h2>Paras Haldiram</h2>
+      <table>
+        <tr><td>Shop Bill<br>Date: ${s.date}<br>Invoice: ${s.invoiceNo}</td>
+        <td style='text-align:right'>Customer Copy</td></tr>
+      </table><br>
+      <table>
+        <tr class='heading'><td>Item</td><td>Qty</td><td>Amount</td></tr>
+        ${s.items.map(it => `<tr class='item'><td>${it.name}</td><td>${it.qty}</td><td>₹${(it.price * it.qty).toFixed(2)}</td></tr>`).join('')}
+        <tr class='total'><td></td><td>Total</td><td>₹${s.total.toFixed(2)}</td></tr>
+      </table>
+      <br>
+      <div style='text-align:center;font-size:14px'>Thank you for shopping with Paras Haldiram!</div>
+    </div>
+  `;
+  document.body.appendChild(temp);
+
+  const opt = {
+    margin: 10,
+    filename: `${s.invoiceNo}_CustomerCopy.pdf`,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+  };
+
+  await html2pdf().set(opt).from(temp).save();
+
+  temp.remove(); // ✅ remove after saving
+});
     previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
       const id = ev.target.dataset.id;
       if (!confirm('Delete this bill permanently?')) return;
