@@ -382,15 +382,28 @@
       if (!docSnap.exists()) return alert('Bill not found');
       showInvoice(docSnap.data(), id);
     });
-    previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
-      const id = ev.target.dataset.id;
-      const docSnap = await getDoc(doc(db, 'sales', id));
-      if (!docSnap.exists()) return alert('Bill not found');
-      const s = docSnap.data();
-      showInvoice(s, id);
-      const opt = { margin: 10, filename: `${s.invoiceNo}_CustomerCopy.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().set(opt).from(invoiceContent).save();
-    });
+   previousBillsArea.querySelectorAll('.download-btn').forEach(b => b.onclick = async (ev) => {
+  const id = ev.target.dataset.id;
+  const docSnap = await getDoc(doc(db, 'sales', id));
+  if (!docSnap.exists()) return alert('Bill not found');
+
+  const s = docSnap.data();
+  showInvoice(s, id);
+
+  // ✅ Fix: wait for invoice to render before generating PDF
+  await new Promise(resolve => setTimeout(resolve, 150));
+
+  const opt = {
+    margin: 10,
+    filename: `${s.invoiceNo}_CustomerCopy.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(invoiceContent).save();
+});
+
     previousBillsArea.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (ev) => {
       const id = ev.target.dataset.id;
       if (!confirm('Delete this bill permanently?')) return;
