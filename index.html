@@ -308,97 +308,12 @@
     }
 
     // show invoice and refresh products & previous bills
-   function showInvoice(sale, docId){
-  invoiceContent.innerHTML = `
-  <style>
-    .memo-container{
-      border:3px solid #d62828;
-      padding:20px;
-      width: 680px;
-      font-family: 'Segoe UI', sans-serif;
-      color:#d62828;
-    }
-    .memo-header{
-      text-align:center;
-      font-weight:bold;
-      margin-bottom:10px;
-      line-height:1.3rem;
-    }
-    .memo-table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:14px;
-      color:black;
-    }
-    .memo-table th, .memo-table td{
-      border:2px solid #d62828;
-      padding:4px;
-      text-align:center;
-    }
-    .final-row td{
-      font-weight:bold;
-      text-align:right;
-      padding-right:20px;
-    }
-    #invoicePrint { background: white; }
-  </style>
-
-  <div class="memo-container">
-
-      <div class="memo-header" style="font-size:14px;">Cash / Credit Memo</div>
-      <div class="memo-header" style="font-size:26px;">PARAS HALDIRAM (PARTY)</div>
-      <div class="memo-header" style="font-size:16px;">DEALER OF HALDIRAM’S PRODUCTS</div>
-      <div class="memo-header" style="font-size:18px;">WHOLESALE & RETAIL</div>
-      <div class="memo-header" style="font-size:13px; color:black;">
-          Papad, Chips, Bhel, Namkeen, Sey, Chutney, Syrup, Biscuits, Chocolate and all Haldiram products.
-      </div>
-      <div class="memo-header" style="font-size:15px; color:black;">
-          Bardoli Road, near Rajhans School – For trade use only
-      </div>
-      <br>
-
-      <!-- Customer Name + Bill No -->
-      <div style="display:flex;justify-content:space-between;font-size:16px;color:black;">
-          <div>Name: ________________________</div>
-          <div>Bill No.: <b>${sale.invoiceNo}</b></div>
-      </div>
-      <br>
-
-      <!-- Table -->
-      <table class="memo-table">
-          <thead>
-              <tr>
-                  <th>No.</th>
-                  <th>Description</th>
-                  <th>Quantity</th>
-                  <th>Amount</th>
-              </tr>
-          </thead>
-          <tbody>
-              ${sale.items.map((it, index) => `
-                  <tr>
-                      <td>${index + 1}</td>
-                      <td style="text-align:left;padding-left:6px;">${it.name}</td>
-                      <td>${it.qty}</td>
-                      <td>₹ ${(it.qty * it.price).toFixed(2)}</td>
-                  </tr>
-              `).join('')}
-              <tr class="final-row">
-                <td colspan="3">Final Amount</td>
-                <td>₹ ${sale.total.toFixed(2)}</td>
-              </tr>
-          </tbody>
-      </table>
-
-      <br><br>
-      <div style="text-align:right;font-size:16px;">Signature</div>
-  </div>
-  `;
-
-  invoicePrint.style.display = "block";
-  lastInvoiceArea.innerText = `Invoice ${sale.invoiceNo} — ${sale.date}`;
-  if (docId) lastInvoiceArea.dataset.docId = docId;
-}
+    showInvoice(saleDoc, saleRef.id);
+    cart = [];
+    renderCart();
+    await refreshAllProducts();
+    await loadPreviousBills();
+  }
 
   document.getElementById('generateBill').onclick = generateBillFirestore;
 
