@@ -210,9 +210,10 @@
     productsTableBody.appendChild(tr);
 
     const o = document.createElement('option');
-    o.value = p.id;
-    o.textContent = `${p.name} (${p.stock})`;
-    selectProduct.appendChild(o);
+o.value = p.id;
+o.textContent = `${p.name} — ₹${p.price} (Stock: ${p.stock})`;
+o.dataset.price = p.price; // optional if you need later
+selectProduct.appendChild(o);
   });
 
   const low = filtered.filter(x => x.stock <= (x.threshold || 0));
