@@ -268,35 +268,55 @@ selectProduct.appendChild(o);
   };
 
   /* --- CART --- */
+  window.removeCartItem = (pid) => {
+  cart = cart.filter(c => c.id !== pid);
+  renderCart();
+};
   function renderCart(){
-    cartList.innerHTML = '';
-    let total = 0;
-    cart.forEach(c => {
-      const amt = c.price * c.qty;
-      total += amt;
-      const d = document.createElement('div');
-      d.className = 'cart-item';
-      d.innerHTML = `<div>${c.name} × ${c.qty}</div><div>${money(amt)}</div>`;
-      cartList.appendChild(d);
-    });
-    cartTotalEl.textContent = money(total);
-  }
+  cartList.innerHTML = '';
+  let total = 0;
 
-  document.getElementById('addToCart').onclick = async () => {
-    const pid = selectProduct.value;
-    const qty = parseInt(document.getElementById('cartQty').value) || 1;
-    if (!pid) return alert('Select product');
-    const snap = await getDoc(doc(db, 'products', pid));
-    if (!snap.exists()) return alert('Product not found');
-    const prod = snap.data();
-    if (qty > prod.stock) return alert('Not enough stock');
-    const existing = cart.find(c => c.id === pid);
-    if (existing) existing.qty += qty;
-    else cart.push({ id: pid, name: prod.name, price: prod.price, qty });
-    renderCart();
-  };
+  cart.forEach(c => {
+    const amt = c.price * c.qty;
+    total += amt;
 
-  document.getElementById('clearCart').onclick = () => { cart = []; renderCart(); };
+    const d = document.createElement('div');
+    d.className = 'cart-item';
+    d.innerHTML = `
+      <div>${c.name} × ${c.qty}</div>
+      <div>
+        ${money(amt)}
+        <button class="small-btn" style="background:#c62828;margin-left:10px"
+                onclick="removeCartItem('${c.id}')">❌</button>
+      </div>
+    `;
+    cartList.appendChild(d);
+  });
+
+  cartTotalEl.textContent = money(total);
+}
+
+document.getElementById('addToCart').onclick = async () => {
+  const pid = selectProduct.value;
+  const qty = parseInt(document.getElementById('cartQty').value) || 1;
+  if (!pid) return alert('Select product');
+  const snap = await getDoc(doc(db, 'products', pid));
+  if (!snap.exists()) return alert('Product not found');
+  const prod = snap.data();
+
+  if (qty > prod.stock) return alert('Not enough stock');
+
+  const existing = cart.find(c => c.id === pid);
+  if (existing) existing.qty += qty;
+  else cart.push({ id: pid, name: prod.name, price: prod.price, qty });
+
+  renderCart();
+};
+
+document.getElementById('clearCart').onclick = () => { 
+  cart = []; 
+  renderCart(); 
+};
 
   /* --- SALES / BILLS --- */
   async function generateBillFirestore(){
