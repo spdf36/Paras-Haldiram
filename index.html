@@ -74,10 +74,13 @@
       </form>
     </div>
 
-    <div class="card">
-      <h3>Product Stock</h3>
-      <div id="lowStockBanner" class="muted"></div>
-      <table id="productsTable">
+   <div class="card">
+  <h3>Product Stock</h3>
+
+  <input id="productSearch" placeholder="Search Product..." style="margin-bottom:10px">
+
+  <div id="lowStockBanner" class="muted"></div>
+  <table id="productsTable">
         <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Threshold</th><th>Action</th></tr></thead>
         <tbody></tbody>
       </table>
@@ -183,31 +186,40 @@
     return products;
   }
 
-  function renderProducts(products){
-    productsTableBody.innerHTML = '';
-    selectProduct.innerHTML = '';
-    products.forEach(p => {
-      const tr = document.createElement('tr');
-      if (p.stock <= (p.threshold || 0)) tr.classList.add('low-stock');
-      tr.innerHTML = `<td>${p.name}</td>
-                      <td>${money(p.price)}</td>
-                      <td>${p.stock}</td>
-                      <td>${p.threshold || 0}</td>
-                      <td>
-                        <button onclick="editProductFire('${p.id}')">Edit</button>
-                        <button onclick="deleteProductFire('${p.id}')" style="background:#c62828">Del</button>
-                      </td>`;
-      productsTableBody.appendChild(tr);
+ function renderProducts(products){
+  const searchValue = document.getElementById("productSearch")?.value.toLowerCase() || "";
 
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = `${p.name} (${p.stock})`;
-      selectProduct.appendChild(o);
-    });
+  productsTableBody.innerHTML = '';
+  selectProduct.innerHTML = '';
 
-    const low = products.filter(x => x.stock <= (x.threshold || 0));
-    lowStockBanner.innerHTML = low.length ? `<span style='color:#c62828'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>` : 'All products are sufficiently stocked.';
-  }
+  const filtered = products.filter(p =>
+    p.name.toLowerCase().includes(searchValue)
+  );
+
+  filtered.forEach(p => {
+    const tr = document.createElement('tr');
+    if (p.stock <= (p.threshold || 0)) tr.classList.add('low-stock');
+    tr.innerHTML = `<td>${p.name}</td>
+                    <td>${money(p.price)}</td>
+                    <td>${p.stock}</td>
+                    <td>${p.threshold || 0}</td>
+                    <td>
+                      <button onclick="editProductFire('${p.id}')">Edit</button>
+                      <button onclick="deleteProductFire('${p.id}')" style="background:#c62828">Del</button>
+                    </td>`;
+    productsTableBody.appendChild(tr);
+
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = `${p.name} (${p.stock})`;
+    selectProduct.appendChild(o);
+  });
+
+  const low = filtered.filter(x => x.stock <= (x.threshold || 0));
+  lowStockBanner.innerHTML = low.length
+    ? `<span style='color:#c62828'>Low stock: ${low.map(x => x.name + ' (' + x.stock + ')').join(', ')}</span>`
+    : 'All products are sufficiently stocked.';
+}
 
   // Expose edit/delete to global for inline handlers
   window.editProductFire = async (docId) => {
@@ -536,6 +548,10 @@ const saleDoc = {
     renderCart();
   }
   init();
+document.getElementById("productSearch").addEventListener("input", async () => {
+  const products = await loadProductsFromFirestore();
+  renderProducts(products);
+});
 
   // Expose some helpers for console if needed
   window._paras = { db };
