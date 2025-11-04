@@ -268,29 +268,57 @@ selectProduct.appendChild(o);
   };
 
   /* --- CART --- */
-  window.removeCartItem = (pid) => {
+  /* --- CART CONTROLS --- */
+
+window.increaseQty = (pid) => {
+  const item = cart.find(c => c.id === pid);
+  if (!item) return;
+
+  item.qty++;
+  renderCart();
+};
+
+window.decreaseQty = (pid) => {
+  const item = cart.find(c => c.id === pid);
+  if (!item) return;
+
+  if (item.qty > 1) item.qty--;
+  else cart = cart.filter(c => c.id !== pid);  // remove item if qty hits 0
+
+  renderCart();
+};
+
+window.removeCartItem = (pid) => {
   cart = cart.filter(c => c.id !== pid);
   renderCart();
 };
-  function renderCart(){
+
+function renderCart() {
   cartList.innerHTML = '';
   let total = 0;
 
   cart.forEach(c => {
-    const amt = c.price * c.qty;
-    total += amt;
+    const amount = c.price * c.qty;
+    total += amount;
 
-    const d = document.createElement('div');
-    d.className = 'cart-item';
-    d.innerHTML = `
-      <div>${c.name} × ${c.qty}</div>
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+
+    div.innerHTML = `
       <div>
-        ${money(amt)}
+        ${c.name}
+        <button class="small-btn" onclick="decreaseQty('${c.id}')">−</button>
+        <span style="padding:0 6px">${c.qty}</span>
+        <button class="small-btn" onclick="increaseQty('${c.id}')">+</button>
+      </div>
+      <div>
+        ${money(amount)}
         <button class="small-btn" style="background:#c62828;margin-left:10px"
                 onclick="removeCartItem('${c.id}')">❌</button>
       </div>
     `;
-    cartList.appendChild(d);
+
+    cartList.appendChild(div);
   });
 
   cartTotalEl.textContent = money(total);
@@ -300,15 +328,19 @@ document.getElementById('addToCart').onclick = async () => {
   const pid = selectProduct.value;
   const qty = parseInt(document.getElementById('cartQty').value) || 1;
   if (!pid) return alert('Select product');
-  const snap = await getDoc(doc(db, 'products', pid));
-  if (!snap.exists()) return alert('Product not found');
-  const prod = snap.data();
 
-  if (qty > prod.stock) return alert('Not enough stock');
+  const snap = await getDoc(doc(db, "products", pid));
+  if (!snap.exists()) return alert("Product not found");
+  const prod = snap.data();
 
   const existing = cart.find(c => c.id === pid);
   if (existing) existing.qty += qty;
-  else cart.push({ id: pid, name: prod.name, price: prod.price, qty });
+  else cart.push({
+    id: pid,
+    name: prod.name,
+    price: prod.price,
+    qty
+  });
 
   renderCart();
 };
