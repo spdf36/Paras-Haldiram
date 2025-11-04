@@ -100,7 +100,13 @@
       <h3>Create Bill</h3>
       <input id="customerName" placeholder="Customer Name (optional)"><br><br>
       <input id="address" placeholder="address (optional)"><br><br>
-      <select id="selectProduct"></select><br><br>
+      <div style="position:relative;">
+  <input id="productDropdownSearch" placeholder="Search product..." style="padding:8px;width:100%;border-radius:6px;border:1px solid #ddd;">
+  
+  <select id="selectProduct" size="6" style="width:100%;position:absolute;top:38px;left:0;z-index:10;background:white;border:1px solid #ddd;border-radius:6px;display:none;">
+  </select>
+</div>
+<br><br>
       <input id="cartQty" type="number" value="1" min="1"><br><br>
       <button id="addToCart">Add to Cart</button>
       <div id="cartList" style="margin-top:10px"></div>
@@ -153,6 +159,23 @@
   // DOM refs
   const productsTableBody = document.querySelector('#productsTable tbody');
   const selectProduct = document.getElementById('selectProduct');
+  const productSearchInput = document.getElementById("productDropdownSearch");
+
+// Show dropdown when typing
+productSearchInput.addEventListener("input", () => {
+  const search = productSearchInput.value.toLowerCase();
+  Array.from(selectProduct.options).forEach(opt => {
+    opt.style.display = opt.textContent.toLowerCase().includes(search) ? "block" : "none";
+  });
+
+  selectProduct.style.display = search ? "block" : "none";
+});
+
+// Hide dropdown after selecting
+selectProduct.addEventListener("change", () => {
+  productSearchInput.value = selectProduct.selectedOptions[0].textContent;
+  selectProduct.style.display = "none";
+});
   const cartList = document.getElementById('cartList');
   const cartTotalEl = document.getElementById('cartTotal');
   const lowStockBanner = document.getElementById('lowStockBanner');
@@ -191,6 +214,7 @@
 
   productsTableBody.innerHTML = '';
   selectProduct.innerHTML = '';
+productSearchInput.value = ""; // clear search on reload
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(searchValue)
